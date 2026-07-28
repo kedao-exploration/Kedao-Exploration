@@ -100,13 +100,6 @@
       margin-left: 10px;
     }
 
-    button.btn-danger {
-      background: rgba(239, 68, 68, 0.8);
-      box-shadow: 0 4px 15px rgba(239, 68, 68, 0.3);
-      padding: 6px 12px;
-      font-size: 0.75rem;
-    }
-
     /* 卡片网格 */
     .card-grid {
       display: grid;
@@ -450,7 +443,6 @@
     <div class="wall-toolbar">
       <div class="wall-controls">
         <span class="wall-count">共 <strong id="wall-count">0</strong> 份宣言</span>
-        <button id="btn-clear-all" class="btn-danger">清空全部</button>
       </div>
       <div id="wall-filters" class="wall-filters"></div>
     </div>
@@ -599,21 +591,6 @@
       allDeclarations.push(data);
     }
 
-    async function deleteDeclaration(id) {
-      const { error } = await supabaseClient.from(DECLARATIONS_TABLE).delete().eq('id', id);
-      if (error) throw error;
-      allDeclarations = allDeclarations.filter(item => item.id !== id);
-    }
-
-    async function clearAllDeclarations() {
-      if (confirm('确定要清空所有宣言记录吗？此操作不可恢复！')) {
-        const { error } = await supabaseClient.from(DECLARATIONS_TABLE).delete().not('id', 'is', null);
-        if (error) { alert('清空失败：' + error.message); return; }
-        allDeclarations = [];
-        renderWall();
-      }
-    }
-
     function getTypeCount(typeName) {
       return allDeclarations.filter(item => item.type === typeName).length;
     }
@@ -671,25 +648,12 @@
             <div class="wall-declaration"><span class="wall-quote">“</span>${escapeHtml(item.declaration)}”</div>
             <div class="wall-actions">
               <span class="wall-time">${timeStr}</span>
-              <button class="btn-danger" data-delete-id="${escapeHtml(item.id)}">删除</button>
             </div>
           </div>
         `;
       });
       container.innerHTML = html;
 
-      container.querySelectorAll('button[data-delete-id]').forEach(btn => {
-        btn.addEventListener('click', function(e) {
-          e.stopPropagation();
-          const id = this.getAttribute('data-delete-id');
-          if (confirm('确定要删除这条宣言吗？')) {
-            deleteDeclaration(id).then(() => {
-              const currentFilter = wallFilters.querySelector('.filter-chip.active')?.dataset.filter || 'all';
-              populateFilter(); renderWall(currentFilter);
-            }).catch(error => alert('删除失败：' + error.message));
-          }
-        });
-      });
     }
 
     function escapeHtml(text) {
@@ -719,7 +683,6 @@
     const btnRestart = document.getElementById('btn-restart');
     const btnShowWall = document.getElementById('btn-show-wall');
     const btnBackFromWall = document.getElementById('btn-back-from-wall');
-    const btnClearAll = document.getElementById('btn-clear-all');
     const wallFilters = document.getElementById('wall-filters');
 
     const inputName = document.getElementById('input-name');
@@ -905,12 +868,6 @@
 
     btnBackFromWall.addEventListener('click', () => {
       goToStep(0);
-    });
-
-    btnClearAll.addEventListener('click', async function() {
-      await clearAllDeclarations();
-      populateFilter();
-      renderWall('all');
     });
 
     loadDeclarations();
