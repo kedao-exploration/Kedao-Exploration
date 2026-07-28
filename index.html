@@ -295,36 +295,22 @@
     }
 
     /* 宣言墙样式 */
-    .wall-controls {
-      width: 100%;
-      margin-bottom: 15px;
-      display: flex;
-      gap: 10px;
-      align-items: center;
-    }
-
-    .wall-controls select {
-      flex: 1;
-      padding: 10px;
-      border-radius: 20px;
-      border: 1px solid #475569;
-      background: rgba(255, 255, 255, 0.1);
-      color: #f8fafc;
-      font-size: 0.9rem;
-      outline: none;
-    }
-
-    .wall-controls select option {
-      background: #1e293b;
-      color: #f8fafc;
-    }
+    .wall-intro { width: 100%; margin: -8px 0 18px; color: #94a3b8; font-size: .82rem; }
+    .wall-toolbar { width: 100%; margin-bottom: 16px; }
+    .wall-controls { display: flex; gap: 8px; align-items: center; justify-content: space-between; margin-bottom: 10px; }
+    .wall-count { color: #cbd5e1; font-size: .8rem; }
+    .wall-count strong { color: #fbbf24; font-size: 1rem; }
+    .wall-filters { display: flex; gap: 7px; overflow-x: auto; padding: 3px 0 7px; scrollbar-width: none; }
+    .wall-filters::-webkit-scrollbar { display: none; }
+    .filter-chip { margin: 0; padding: 7px 13px; border: 1px solid rgba(148,163,184,.3); background: rgba(255,255,255,.07); box-shadow: none; color: #cbd5e1; font-size: .76rem; white-space: nowrap; }
+    .filter-chip.active { background: linear-gradient(135deg, #6366f1, #8b5cf6); border-color: transparent; color: white; box-shadow: 0 4px 12px rgba(99,102,241,.3); }
 
     #declaration-wall {
       width: 100%;
       max-height: 55vh;
       overflow-y: auto;
       margin-top: 5px;
-      padding: 10px 0;
+      padding: 2px 2px 10px;
     }
 
     .wall-item {
@@ -335,6 +321,7 @@
       text-align: left;
       border: 1px solid rgba(255, 255, 255, 0.1);
       position: relative;
+      box-shadow: 0 8px 20px rgba(0,0,0,.12);
     }
 
     .wall-item .wall-header {
@@ -364,6 +351,7 @@
       font-size: 0.95rem;
       line-height: 1.5;
       margin-bottom: 10px;
+      min-height: 44px;
     }
 
     .wall-item .wall-actions {
@@ -384,6 +372,8 @@
       text-align: center;
       padding: 40px 0;
     }
+
+    .wall-quote { color: #fbbf24; font-size: 1.5rem; line-height: 1; margin-right: 3px; }
 
     /* 动画 */
     @keyframes fadeIn {
@@ -456,11 +446,13 @@
 
   <div id="step-6" class="step">
     <h2>📜 探索宣言墙</h2>
-    <div class="wall-controls">
-      <select id="wall-filter">
-        <option value="all">全部类型</option>
-      </select>
-      <button id="btn-clear-all" class="btn-danger">清空全部</button>
+    <p class="wall-intro">把每一份期待，拼成属于我们的探索星图</p>
+    <div class="wall-toolbar">
+      <div class="wall-controls">
+        <span class="wall-count">共 <strong id="wall-count">0</strong> 份宣言</span>
+        <button id="btn-clear-all" class="btn-danger">清空全部</button>
+      </div>
+      <div id="wall-filters" class="wall-filters"></div>
     </div>
     <div id="declaration-wall"></div>
     <div class="button-group" style="margin-top:20px;">
@@ -639,14 +631,15 @@
     }
 
     function populateFilter() {
-      const filterSelect = document.getElementById('wall-filter');
-      if (!filterSelect) return;
       const uniqueTypes = getUniqueTypes();
-      let options = '<option value="all">全部类型</option>';
-      uniqueTypes.forEach(type => {
-        options += `<option value="${escapeHtml(type)}">${escapeHtml(type)}</option>`;
-      });
-      filterSelect.innerHTML = options;
+      wallFilters.innerHTML = ['all', ...uniqueTypes].map((type, index) =>
+        `<button class="filter-chip${index === 0 ? ' active' : ''}" data-filter="${escapeHtml(type)}">${type === 'all' ? '全部' : escapeHtml(type)}</button>`
+      ).join('');
+      wallFilters.querySelectorAll('.filter-chip').forEach(btn => btn.addEventListener('click', () => {
+        wallFilters.querySelectorAll('.filter-chip').forEach(item => item.classList.remove('active'));
+        btn.classList.add('active');
+        renderWall(btn.dataset.filter);
+      }));
     }
 
     function renderWall(filterType = 'all') {
@@ -659,9 +652,11 @@
       }
 
       if (filtered.length === 0) {
+        document.getElementById('wall-count').textContent = '0';
         container.innerHTML = '<div class="wall-empty">✨ 还没有宣言，快来当第一个吧！</div>';
         return;
       }
+      document.getElementById('wall-count').textContent = filtered.length;
 
       const sorted = [...filtered].reverse();
       let html = '';
@@ -673,7 +668,7 @@
               <span class="wall-name">${escapeHtml(item.name)}</span>
               <span class="wall-type">${escapeHtml(item.type)}</span>
             </div>
-            <div class="wall-declaration">“${escapeHtml(item.declaration)}”</div>
+            <div class="wall-declaration"><span class="wall-quote">“</span>${escapeHtml(item.declaration)}”</div>
             <div class="wall-actions">
               <span class="wall-time">${timeStr}</span>
               <button class="btn-danger" data-delete-id="${escapeHtml(item.id)}">删除</button>
@@ -689,7 +684,7 @@
           const id = this.getAttribute('data-delete-id');
           if (confirm('确定要删除这条宣言吗？')) {
             deleteDeclaration(id).then(() => {
-              const currentFilter = document.getElementById('wall-filter').value;
+              const currentFilter = wallFilters.querySelector('.filter-chip.active')?.dataset.filter || 'all';
               populateFilter(); renderWall(currentFilter);
             }).catch(error => alert('删除失败：' + error.message));
           }
@@ -725,7 +720,7 @@
     const btnShowWall = document.getElementById('btn-show-wall');
     const btnBackFromWall = document.getElementById('btn-back-from-wall');
     const btnClearAll = document.getElementById('btn-clear-all');
-    const wallFilter = document.getElementById('wall-filter');
+    const wallFilters = document.getElementById('wall-filters');
 
     const inputName = document.getElementById('input-name');
     const inputDeclaration = document.getElementById('input-declaration');
@@ -910,10 +905,6 @@
 
     btnBackFromWall.addEventListener('click', () => {
       goToStep(0);
-    });
-
-    wallFilter.addEventListener('change', function() {
-      renderWall(this.value);
     });
 
     btnClearAll.addEventListener('click', async function() {
