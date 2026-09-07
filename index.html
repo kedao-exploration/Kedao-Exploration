@@ -321,6 +321,12 @@
             border-color: #b28b74;
             box-shadow: 0 0 0 4px rgba(178,139,116,0.1);
         }
+        .direction-heading {
+            color: #d4b8a0;
+            font-size: 15px;
+            font-weight: 700;
+            margin: 18px 0 8px;
+        }
         .form-row {
             display: flex;
             gap: 16px;
@@ -364,12 +370,37 @@
         </div>
     </div>
 
-    <!-- ===== STEP 2: 探索生涯 ===== -->
+    <!-- ===== STEP 2: 探索方向（可单选或双选） ===== -->
     <div class="step-page" data-step="2">
-        <h2>📚 探索生涯</h2>
-        <div class="sub">选你感兴趣的领域，<em>多点几下</em>也没问题！</div>
+        <h2>🧭 选择探索方向</h2>
+        <div class="sub">至少选择一个方向，<em>也可以两个都选</em>！</div>
 
-        <div class="module-grid" id="careerGrid">
+        <div class="role-group" id="explorationTypeGroup">
+            <div class="role-card" data-exploration-type="career">
+                <span class="emoji">📚</span>
+                <div class="name">探索生涯</div>
+                <div class="desc">认识专业、科研、社团与产业</div>
+            </div>
+            <div class="role-card" data-exploration-type="life">
+                <span class="emoji">🌆</span>
+                <div class="name">探索生活</div>
+                <div class="desc">行走上海、探访城市与设计路线</div>
+            </div>
+        </div>
+
+        <div class="btn-group">
+            <button class="btn btn-secondary" id="step2Back">← 上一步</button>
+            <button class="btn btn-primary" id="step2Next">下一步 →</button>
+        </div>
+    </div>
+
+    <!-- ===== STEP 3: 具体模块 ===== -->
+    <div class="step-page" data-step="3">
+        <h2 id="moduleStepTitle">选择探索模块</h2>
+        <div class="sub" id="moduleStepSub">在你选择的方向里，挑选感兴趣的模块。</div>
+
+        <div class="direction-heading" id="careerSectionLabel" style="display:none;">📚 探索生涯</div>
+        <div class="module-grid" id="careerGrid" style="display:none;">
             <div class="module-card" data-value="lecture">
                 <span class="check">✓</span>
                 <span class="emoji">🎤</span>
@@ -396,18 +427,8 @@
             </div>
         </div>
 
-        <div class="btn-group">
-            <button class="btn btn-secondary" id="step2Back">← 上一步</button>
-            <button class="btn btn-primary" id="step2Next">下一步 →</button>
-        </div>
-    </div>
-
-    <!-- ===== STEP 3: 探索生活 ===== -->
-    <div class="step-page" data-step="3">
-        <h2>🌆 探索生活</h2>
-        <div class="sub">选你想怎么玩转上海，<em>全都想要就全选</em>！</div>
-
-        <div class="module-grid three" id="lifeGrid">
+        <div class="direction-heading" id="lifeSectionLabel" style="display:none;">🌆 探索生活</div>
+        <div class="module-grid three" id="lifeGrid" style="display:none;">
             <div class="module-card" data-value="walk">
                 <span class="check">✓</span>
                 <span class="emoji">🚶</span>
@@ -478,12 +499,13 @@
         const SUPABASE_URL = 'https://pijikicwflvrrkmhxfkx.supabase.co';
         const SUPABASE_PUBLISHABLE_KEY = 'sb_publishable_Cw-XggfEtxYCeEi-QS49xg_EZ3wzLq8';
         const SUBMISSIONS_TABLE = 'exploration_submissions';
-        const PAGE_VERSION = '1.0.0';
+        const PAGE_VERSION = '2.1.0';
 
         // ----- 全局状态 -----
         let state = {
             step: 1,
             role: 'participant',   // participant | organizer
+            explorationTypes: [], // career | life，可同时选择
             career: [],            // selected values
             life: [],              // selected values
         };
@@ -491,9 +513,16 @@
         // ----- DOM refs -----
         const stepPages = document.querySelectorAll('.step-page');
         const stepIndicator = document.getElementById('stepIndicator');
-        const roleCards = document.querySelectorAll('.role-card');
+        const roleCards = document.querySelectorAll('[data-role]');
+        const explorationTypeCards = document.querySelectorAll('[data-exploration-type]');
         const careerCards = document.querySelectorAll('#careerGrid .module-card');
         const lifeCards = document.querySelectorAll('#lifeGrid .module-card');
+        const careerGrid = document.getElementById('careerGrid');
+        const lifeGrid = document.getElementById('lifeGrid');
+        const careerSectionLabel = document.getElementById('careerSectionLabel');
+        const lifeSectionLabel = document.getElementById('lifeSectionLabel');
+        const moduleStepTitle = document.getElementById('moduleStepTitle');
+        const moduleStepSub = document.getElementById('moduleStepSub');
 
         const step1Next = document.getElementById('step1Next');
         const step2Back = document.getElementById('step2Back');
@@ -522,6 +551,43 @@
                 state.role = this.dataset.role;
             });
         });
+
+        // ----- 探索方向：可单选或双选 -----
+        explorationTypeCards.forEach(card => {
+            card.addEventListener('click', function() {
+                const type = this.dataset.explorationType;
+                this.classList.toggle('active');
+                if (this.classList.contains('active')) {
+                    if (!state.explorationTypes.includes(type)) state.explorationTypes.push(type);
+                } else {
+                    state.explorationTypes = state.explorationTypes.filter(value => value !== type);
+                }
+
+                if (!state.explorationTypes.includes('life')) {
+                    state.life = [];
+                    lifeCards.forEach(c => c.classList.remove('active'));
+                }
+                if (!state.explorationTypes.includes('career')) {
+                    state.career = [];
+                    careerCards.forEach(c => c.classList.remove('active'));
+                }
+            });
+        });
+
+        function prepareModuleStep() {
+            const hasCareer = state.explorationTypes.includes('career');
+            const hasLife = state.explorationTypes.includes('life');
+            careerGrid.style.display = hasCareer ? 'grid' : 'none';
+            lifeGrid.style.display = hasLife ? 'grid' : 'none';
+            careerSectionLabel.style.display = hasCareer && hasLife ? 'block' : 'none';
+            lifeSectionLabel.style.display = hasCareer && hasLife ? 'block' : 'none';
+            moduleStepTitle.textContent = hasCareer && hasLife
+                ? '🧭 选择探索模块'
+                : hasCareer ? '📚 探索生涯' : '🌆 探索生活';
+            moduleStepSub.innerHTML = hasCareer && hasLife
+                ? '两个方向分别选择至少一个模块，<em>喜欢的都可以选</em>！'
+                : '选择至少一个具体模块，<em>喜欢的都可以选</em>！';
+        }
 
         // ----- 模块点击 (生涯) -----
         careerCards.forEach(card => {
@@ -556,17 +622,20 @@
 
         step2Back.addEventListener('click', function() { goToStep(1); });
         step2Next.addEventListener('click', function() {
-            if (state.career.length === 0) {
-                alert('至少选一个生涯模块哦～不然怎么帮你规划呢？');
+            if (state.explorationTypes.length === 0) {
+                alert('请至少选择“探索生涯”或“探索生活”中的一个方向哦～');
                 return;
             }
+            prepareModuleStep();
             goToStep(3);
         });
 
         step3Back.addEventListener('click', function() { goToStep(2); });
         step3Next.addEventListener('click', function() {
-            if (state.life.length === 0) {
-                alert('至少选一个生活模块，不然上海之旅不完整！');
+            const careerMissing = state.explorationTypes.includes('career') && state.career.length === 0;
+            const lifeMissing = state.explorationTypes.includes('life') && state.life.length === 0;
+            if (careerMissing || lifeMissing) {
+                alert('每个已选择的方向都请至少选择一个具体模块哦～');
                 return;
             }
             goToStep(4);
@@ -613,9 +682,11 @@
             }
 
             if (careerNames.length > 0 && lifeNames.length > 0) {
-                paths.push('🌟 高阶玩法：把专业兴趣和城市探索混搭，比如去产业参访时顺带逛周边街区，或者用社团活动策划一场城市快闪——你的大学故事，由你定义！');
+                paths.push('🌟 双线探索：把专业兴趣与城市体验串起来，让生涯选择和生活成长彼此启发。');
             } else {
-                paths.push('🚀 还没想好怎么组合？没关系，先专注你感兴趣的领域，慢慢来，比较快。');
+                paths.push(careerNames.length > 0
+                    ? '🚀 先从感兴趣的生涯模块出发，把体验变成对未来方向的真实判断。'
+                    : '🚀 先从感兴趣的生活模块出发，在一次次行走和探访中建立与上海的连接。');
             }
 
             if (state.role === 'organizer') {
@@ -652,6 +723,7 @@
                 major,
                 email,
                 role: state.role,
+                exploration_type: state.explorationTypes.length === 2 ? 'both' : state.explorationTypes[0],
                 career: [...state.career],
                 life: [...state.life],
                 selected_modules: result.selectedModules,

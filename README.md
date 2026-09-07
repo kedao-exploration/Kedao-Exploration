@@ -2,6 +2,8 @@
 
 静态单页应用，通过 Supabase REST API 保存每次提交的完整表单数据与生成结果。
 
+“探索生涯”和“探索生活”至少选择一个方向，也支持两个方向同时选择。
+
 ## 首次部署
 
 1. 打开 Supabase Dashboard 的 **SQL Editor**。

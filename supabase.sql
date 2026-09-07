@@ -12,21 +12,73 @@ create table if not exists public.exploration_submissions (
         and email ~* '^[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}$'
     ),
     role text not null check (role in ('participant', 'organizer')),
+    exploration_type text,
     career text[] not null check (
-        cardinality(career) between 1 and 4
+        cardinality(career) between 0 and 4
         and career <@ array['lecture', 'lab', 'club', 'industry']::text[]
     ),
     life text[] not null check (
-        cardinality(life) between 1 and 3
+        cardinality(life) between 0 and 3
         and life <@ array['walk', 'heritage', 'citywalk']::text[]
     ),
-    selected_modules text[] not null check (cardinality(selected_modules) between 2 and 7),
+    selected_modules text[] not null check (cardinality(selected_modules) between 1 and 7),
     generated_paths text[] not null check (cardinality(generated_paths) between 3 and 4),
     client_submitted_at timestamptz not null,
     user_agent text check (user_agent is null or char_length(user_agent) <= 1000),
-    page_version text not null default '1.0.0' check (char_length(page_version) <= 30),
+    page_version text not null default '2.1.0' check (char_length(page_version) <= 30),
     created_at timestamptz not null default now()
 );
+
+-- 兼容已经执行过 1.0 版 SQL 的项目；NOT VALID 会保留历史记录，
+-- 但仍会严格校验从现在开始写入的新记录。
+alter table public.exploration_submissions
+    add column if not exists exploration_type text;
+
+alter table public.exploration_submissions
+    alter column page_version set default '2.1.0';
+
+alter table public.exploration_submissions
+    drop constraint if exists exploration_submissions_career_check,
+    drop constraint if exists exploration_submissions_life_check,
+    drop constraint if exists exploration_submissions_selected_modules_check,
+    drop constraint if exists exploration_submissions_generated_paths_check,
+    drop constraint if exists exploration_type_required,
+    drop constraint if exists exploration_type_matches_modules;
+
+alter table public.exploration_submissions
+    add constraint exploration_submissions_career_check check (
+        cardinality(career) between 0 and 4
+        and career <@ array['lecture', 'lab', 'club', 'industry']::text[]
+    ) not valid,
+    add constraint exploration_submissions_life_check check (
+        cardinality(life) between 0 and 3
+        and life <@ array['walk', 'heritage', 'citywalk']::text[]
+    ) not valid,
+    add constraint exploration_submissions_selected_modules_check
+        check (cardinality(selected_modules) between 1 and 7) not valid,
+    add constraint exploration_submissions_generated_paths_check
+        check (cardinality(generated_paths) between 3 and 4) not valid,
+    add constraint exploration_type_required
+        check (exploration_type in ('career', 'life', 'both')) not valid,
+    add constraint exploration_type_matches_modules check (
+        (
+            exploration_type = 'career'
+            and cardinality(career) between 1 and 4
+            and cardinality(life) = 0
+        )
+        or
+        (
+            exploration_type = 'life'
+            and cardinality(life) between 1 and 3
+            and cardinality(career) = 0
+        )
+        or
+        (
+            exploration_type = 'both'
+            and cardinality(career) between 1 and 4
+            and cardinality(life) between 1 and 3
+        )
+    ) not valid;
 
 alter table public.exploration_submissions enable row level security;
 
