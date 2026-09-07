@@ -1,892 +1,721 @@
 <!DOCTYPE html>
 <html lang="zh-CN">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <title>探索宣言 · 科道书院</title>
-  <style>
-    * {
-      margin: 0;
-      padding: 0;
-      box-sizing: border-box;
-    }
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>科道书院 · 探索盲盒</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
 
-    body {
-      font-family: -apple-system, BlinkMacSystemFont, "PingFang SC", "Helvetica Neue", sans-serif;
-      background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
-      min-height: 100vh;
-      display: flex;
-      justify-content: center;
-      align-items: center;
-      padding: 20px;
-      color: #f8fafc;
-    }
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            min-height: 100vh;
+            background: #1a1614;
+            background-image: radial-gradient(ellipse at 20% 50%, #2c241e 0%, transparent 60%),
+                radial-gradient(ellipse at 80% 20%, #3d342c 0%, transparent 50%),
+                linear-gradient(135deg, #14100e 0%, #1e1a16 100%);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 24px;
+            position: relative;
+        }
 
-    #app {
-      width: 100%;
-      max-width: 400px;
-      background: rgba(255, 255, 255, 0.06);
-      backdrop-filter: blur(20px);
-      border-radius: 24px;
-      padding: 30px 20px;
-      box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3);
-      position: relative;
-      overflow: hidden;
-      min-height: 520px;
-      display: flex;
-      flex-direction: column;
-      justify-content: center;
-      transition: all 0.3s;
-    }
+        body::before {
+            content: '';
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-image: linear-gradient(rgba(255,255,255,0.02) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(255,255,255,0.02) 1px, transparent 1px);
+            background-size: 40px 40px;
+            pointer-events: none;
+        }
 
-    .step {
-      display: none;
-      flex-direction: column;
-      align-items: center;
-      text-align: center;
-      width: 100%;
-    }
+        .container {
+            max-width: 700px;
+            width: 100%;
+            background: rgba(30, 26, 22, 0.8);
+            backdrop-filter: blur(24px);
+            -webkit-backdrop-filter: blur(24px);
+            border-radius: 48px;
+            padding: 40px 36px 36px;
+            border: 1px solid rgba(255,215,190,0.12);
+            box-shadow: 0 40px 100px rgba(0,0,0,0.6);
+            position: relative;
+            z-index: 2;
+            min-height: 500px;
+            transition: all 0.3s ease;
+        }
 
-    .step.active {
-      display: flex;
-    }
+        .brand {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 24px;
+            border-bottom: 1px solid rgba(255,215,190,0.06);
+            padding-bottom: 16px;
+        }
+        .brand .logo {
+            color: #d4b8a0;
+            font-size: 14px;
+            font-weight: 600;
+            letter-spacing: 1px;
+        }
+        .brand .step-indicator {
+            color: #6b5d50;
+            font-size: 13px;
+            background: rgba(255,255,255,0.04);
+            padding: 4px 14px;
+            border-radius: 40px;
+            border: 1px solid rgba(255,255,255,0.06);
+        }
 
-    h1 {
-      font-size: 2rem;
-      font-weight: 700;
-      margin-bottom: 8px;
-      background: linear-gradient(to right, #a78bfa, #60a5fa);
-      -webkit-background-clip: text;
-      -webkit-text-fill-color: transparent;
-    }
+        .step-page {
+            display: none;
+            animation: fadeUp 0.4s ease;
+        }
+        .step-page.active {
+            display: block;
+        }
 
-    h2 {
-      font-size: 1.4rem;
-      font-weight: 600;
-      margin-bottom: 20px;
-      color: #e2e8f0;
-    }
+        @keyframes fadeUp {
+            from { opacity: 0; transform: translateY(16px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
 
-    .subtitle {
-      color: #94a3b8;
-      margin-bottom: 30px;
-      font-size: 0.9rem;
-    }
+        h2 {
+            font-size: 28px;
+            font-weight: 700;
+            color: #f4efe9;
+            margin-bottom: 4px;
+            letter-spacing: -0.5px;
+        }
+        h2 .highlight {
+            background: linear-gradient(135deg, #e6d5c0, #b8a392);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+        .sub {
+            font-size: 16px;
+            color: #a8988a;
+            margin-bottom: 24px;
+            line-height: 1.5;
+        }
+        .sub em {
+            color: #d4b8a0;
+            font-style: normal;
+        }
 
-    button {
-      background: linear-gradient(135deg, #6366f1, #8b5cf6);
-      border: none;
-      color: white;
-      padding: 12px 24px;
-      border-radius: 50px;
-      font-size: 0.95rem;
-      font-weight: 600;
-      cursor: pointer;
-      transition: transform 0.2s, box-shadow 0.2s;
-      box-shadow: 0 4px 15px rgba(99, 102, 241, 0.4);
-      outline: none;
-      margin-top: 10px;
-    }
+        .role-group {
+            display: flex;
+            gap: 16px;
+            margin: 16px 0 28px;
+        }
+        .role-card {
+            flex: 1;
+            background: rgba(255,255,255,0.03);
+            border: 2px solid rgba(255,255,255,0.06);
+            border-radius: 24px;
+            padding: 24px 16px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+        .role-card:hover {
+            background: rgba(255,255,255,0.06);
+            transform: translateY(-2px);
+        }
+        .role-card.active {
+            border-color: #d4b8a0;
+            background: rgba(212,184,160,0.08);
+            box-shadow: 0 0 30px rgba(212,184,160,0.05);
+        }
+        .role-card .emoji {
+            font-size: 36px;
+            display: block;
+            margin-bottom: 8px;
+        }
+        .role-card .name {
+            font-size: 18px;
+            font-weight: 600;
+            color: #f4efe9;
+        }
+        .role-card .desc {
+            font-size: 13px;
+            color: #8a7c6f;
+            margin-top: 4px;
+        }
 
-    button:active {
-      transform: scale(0.96);
-      box-shadow: 0 2px 8px rgba(99, 102, 241, 0.6);
-    }
+        .module-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 12px;
+            margin: 16px 0 20px;
+        }
+        .module-card {
+            background: rgba(255,255,255,0.03);
+            border: 1px solid rgba(255,255,255,0.06);
+            border-radius: 20px;
+            padding: 18px 16px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            position: relative;
+        }
+        .module-card:hover {
+            background: rgba(255,255,255,0.06);
+            transform: translateY(-2px);
+        }
+        .module-card.active {
+            border-color: #d4b8a0;
+            background: rgba(212,184,160,0.07);
+        }
+        .module-card .emoji {
+            font-size: 24px;
+            display: block;
+            margin-bottom: 4px;
+        }
+        .module-card .title {
+            font-weight: 600;
+            color: #f4efe9;
+            font-size: 16px;
+        }
+        .module-card .desc {
+            font-size: 12.5px;
+            color: #8a7c6f;
+            line-height: 1.4;
+            margin-top: 4px;
+        }
+        .module-card .check {
+            position: absolute;
+            top: 12px;
+            right: 14px;
+            font-size: 18px;
+            color: #d4b8a0;
+            opacity: 0;
+            transition: 0.2s;
+        }
+        .module-card.active .check {
+            opacity: 1;
+        }
+        .module-grid.three {
+            grid-template-columns: 1fr 1fr 1fr;
+        }
 
-    button.btn-secondary {
-      background: rgba(255, 255, 255, 0.15);
-      box-shadow: none;
-      backdrop-filter: blur(5px);
-      margin-left: 10px;
-    }
+        @media (max-width: 600px) {
+            .module-grid { grid-template-columns: 1fr; }
+            .module-grid.three { grid-template-columns: 1fr; }
+            .role-group { flex-direction: column; }
+            .container { padding: 28px 20px; }
+        }
 
-    /* 卡片网格 */
-    .card-grid {
-      display: grid;
-      grid-template-columns: repeat(5, 1fr);
-      gap: 10px;
-      margin: 20px 0;
-      width: 100%;
-      justify-items: center;
-    }
+        .btn-group {
+            display: flex;
+            gap: 12px;
+            margin-top: 24px;
+        }
+        .btn {
+            padding: 14px 28px;
+            border: none;
+            border-radius: 40px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-family: inherit;
+            flex: 1;
+            text-align: center;
+        }
+        .btn-primary {
+            background: linear-gradient(135deg, #f4efe9, #d4c8bc);
+            color: #1e1a16;
+            box-shadow: 0 8px 24px rgba(212,184,160,0.15);
+        }
+        .btn-primary:hover {
+            transform: scale(1.02);
+            box-shadow: 0 12px 36px rgba(212,184,160,0.25);
+        }
+        .btn-secondary {
+            background: rgba(255,255,255,0.05);
+            color: #a8988a;
+            border: 1px solid rgba(255,255,255,0.08);
+        }
+        .btn-secondary:hover {
+            background: rgba(255,255,255,0.1);
+        }
+        .btn:disabled {
+            opacity: 0.4;
+            pointer-events: none;
+        }
 
-    .card {
-      width: 55px;
-      height: 75px;
-      perspective: 800px;
-      cursor: pointer;
-      transition: transform 0.2s;
-    }
+        .submit-status {
+            min-height: 22px;
+            margin-top: 12px;
+            color: #a8988a;
+            font-size: 13px;
+            line-height: 1.5;
+            text-align: center;
+        }
+        .submit-status.error { color: #f2a6a6; }
+        .submit-status.success { color: #b7d7b0; }
 
-    .card-inner {
-      position: relative;
-      width: 100%;
-      height: 100%;
-      transition: transform 0.6s;
-      transform-style: preserve-3d;
-      border-radius: 12px;
-    }
+        .result-box {
+            background: rgba(255,255,255,0.03);
+            border-radius: 24px;
+            padding: 20px 24px;
+            margin: 16px 0;
+            border: 1px solid rgba(255,215,190,0.06);
+        }
+        .result-box .tag {
+            display: inline-block;
+            background: rgba(212,184,160,0.12);
+            color: #d4b8a0;
+            padding: 4px 14px;
+            border-radius: 40px;
+            font-size: 13px;
+            margin: 4px 6px 4px 0;
+        }
+        .path-item {
+            padding: 10px 0;
+            border-bottom: 1px solid rgba(255,255,255,0.04);
+            color: #e6ddd5;
+            font-size: 15px;
+            line-height: 1.6;
+        }
+        .path-item:last-child {
+            border-bottom: none;
+        }
+        .path-item .emoji {
+            margin-right: 10px;
+        }
 
-    .card.flipped .card-inner {
-      transform: rotateY(180deg);
-    }
-
-    .card.selected .card-inner {
-      transform: rotateY(180deg) scale(1.1);
-      box-shadow: 0 0 20px rgba(99, 102, 241, 0.8);
-    }
-
-    .card-front, .card-back {
-      position: absolute;
-      width: 100%;
-      height: 100%;
-      backface-visibility: hidden;
-      border-radius: 12px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-weight: 700;
-      font-size: 0.8rem;
-      text-align: center;
-      padding: 4px;
-    }
-
-    .card-front {
-      background: linear-gradient(145deg, #334155, #1e293b);
-      color: #cbd5e1;
-      border: 1px solid #475569;
-    }
-
-    .card-back {
-      background: linear-gradient(145deg, #6366f1, #4f46e5);
-      color: white;
-      transform: rotateY(180deg);
-      border: 1px solid #818cf8;
-      font-size: 0.75rem;
-    }
-
-    .selected .card-back {
-      background: linear-gradient(145deg, #f59e0b, #d97706);
-      border-color: #fbbf24;
-      box-shadow: 0 0 25px rgba(245, 158, 11, 0.7);
-    }
-
-    /* 类型展示 */
-    #type-name {
-      font-size: 1.8rem;
-      font-weight: 800;
-      background: linear-gradient(to right, #fbbf24, #f59e0b);
-      -webkit-background-clip: text;
-      -webkit-text-fill-color: transparent;
-      margin-bottom: 10px;
-    }
-
-    #type-desc {
-      color: #cbd5e1;
-      margin-bottom: 20px;
-      line-height: 1.6;
-    }
-
-    #type-possibilities {
-      list-style: none;
-      text-align: left;
-      background: rgba(255, 255, 255, 0.08);
-      border-radius: 16px;
-      padding: 15px 20px;
-      margin-bottom: 25px;
-      width: 100%;
-    }
-
-    #type-possibilities li {
-      padding: 8px 0;
-      border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-      color: #94a3b8;
-      font-size: 0.9rem;
-    }
-
-    #type-possibilities li:last-child {
-      border-bottom: none;
-    }
-
-    #type-possibilities li::before {
-      content: "▹ ";
-      color: #f59e0b;
-      font-weight: bold;
-    }
-
-    /* 表单 */
-    input, textarea {
-      width: 100%;
-      padding: 14px 16px;
-      margin: 10px 0;
-      border-radius: 12px;
-      border: 1px solid #475569;
-      background: rgba(255, 255, 255, 0.1);
-      color: white;
-      font-size: 1rem;
-      outline: none;
-      transition: border 0.2s;
-      font-family: inherit;
-    }
-
-    input:focus, textarea:focus {
-      border-color: #6366f1;
-    }
-
-    textarea {
-      height: 80px;
-      resize: none;
-    }
-
-    /* 结果卡片 */
-    .result-card {
-      background: rgba(255, 255, 255, 0.1);
-      border-radius: 24px;
-      padding: 25px 20px;
-      margin: 20px 0;
-      border: 1px solid rgba(255, 255, 255, 0.2);
-      width: 100%;
-    }
-
-    .badge {
-      display: inline-block;
-      background: linear-gradient(135deg, #f59e0b, #d97706);
-      padding: 6px 20px;
-      border-radius: 30px;
-      font-weight: 700;
-      font-size: 0.9rem;
-      margin-bottom: 15px;
-      color: #0f172a;
-    }
-
-    .declaration-text {
-      font-size: 1.3rem;
-      font-weight: 600;
-      margin: 15px 0;
-      line-height: 1.5;
-      color: #f1f5f9;
-    }
-
-    .declaration-author {
-      color: #94a3b8;
-      font-size: 0.9rem;
-      margin-top: 5px;
-    }
-
-    .hint {
-      color: #64748b;
-      font-size: 0.8rem;
-      margin: 20px 0;
-    }
-
-    .button-group {
-      display: flex;
-      gap: 10px;
-      flex-wrap: wrap;
-      justify-content: center;
-      margin-top: 10px;
-    }
-
-    /* 宣言墙样式 */
-    .wall-intro { width: 100%; margin: -8px 0 18px; color: #94a3b8; font-size: .82rem; }
-    .wall-toolbar { width: 100%; margin-bottom: 16px; }
-    .wall-controls { display: flex; gap: 8px; align-items: center; justify-content: space-between; margin-bottom: 10px; }
-    .wall-count { color: #cbd5e1; font-size: .8rem; }
-    .wall-count strong { color: #fbbf24; font-size: 1rem; }
-    .wall-filters { display: flex; gap: 7px; overflow-x: auto; padding: 3px 0 7px; scrollbar-width: none; }
-    .wall-filters::-webkit-scrollbar { display: none; }
-    .filter-chip { margin: 0; padding: 7px 13px; border: 1px solid rgba(148,163,184,.3); background: rgba(255,255,255,.07); box-shadow: none; color: #cbd5e1; font-size: .76rem; white-space: nowrap; }
-    .filter-chip.active { background: linear-gradient(135deg, #6366f1, #8b5cf6); border-color: transparent; color: white; box-shadow: 0 4px 12px rgba(99,102,241,.3); }
-
-    #declaration-wall {
-      width: 100%;
-      max-height: 55vh;
-      overflow-y: auto;
-      margin-top: 5px;
-      padding: 2px 2px 10px;
-    }
-
-    .wall-item {
-      background: rgba(255, 255, 255, 0.08);
-      border-radius: 12px;
-      padding: 15px;
-      margin-bottom: 15px;
-      text-align: left;
-      border: 1px solid rgba(255, 255, 255, 0.1);
-      position: relative;
-      box-shadow: 0 8px 20px rgba(0,0,0,.12);
-    }
-
-    .wall-item .wall-header {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      margin-bottom: 8px;
-    }
-
-    .wall-item .wall-name {
-      font-weight: 700;
-      color: #f8fafc;
-    }
-
-    .wall-item .wall-type {
-      background: rgba(245, 158, 11, 0.2);
-      color: #fbbf24;
-      font-size: 0.75rem;
-      padding: 2px 10px;
-      border-radius: 20px;
-      margin-right: 10px;
-    }
-
-    .wall-item .wall-declaration {
-      color: #cbd5e1;
-      font-style: italic;
-      font-size: 0.95rem;
-      line-height: 1.5;
-      margin-bottom: 10px;
-      min-height: 44px;
-    }
-
-    .wall-item .wall-actions {
-      display: flex;
-      justify-content: flex-end;
-      align-items: center;
-      gap: 8px;
-    }
-
-    .wall-item .wall-time {
-      font-size: 0.7rem;
-      color: #64748b;
-      margin-right: auto;
-    }
-
-    .wall-empty {
-      color: #64748b;
-      text-align: center;
-      padding: 40px 0;
-    }
-
-    .wall-quote { color: #fbbf24; font-size: 1.5rem; line-height: 1; margin-right: 3px; }
-
-    /* 动画 */
-    @keyframes fadeIn {
-      from { opacity: 0; transform: translateY(10px); }
-      to { opacity: 1; transform: translateY(0); }
-    }
-
-    .step.active {
-      animation: fadeIn 0.4s ease-out;
-    }
-
-    /* 滚动条 */
-    #declaration-wall::-webkit-scrollbar {
-      width: 4px;
-    }
-    #declaration-wall::-webkit-scrollbar-thumb {
-      background: rgba(255,255,255,0.2);
-      border-radius: 4px;
-    }
-</style>
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+        .form-group {
+            margin-bottom: 16px;
+        }
+        .form-group label {
+            display: block;
+            font-size: 13px;
+            color: #c4b5a8;
+            font-weight: 600;
+            margin-bottom: 4px;
+            letter-spacing: 0.5px;
+        }
+        .form-group input {
+            width: 100%;
+            padding: 14px 18px;
+            border-radius: 20px;
+            border: 1px solid rgba(255,215,190,0.1);
+            background: rgba(0,0,0,0.3);
+            color: #f4efe9;
+            font-size: 15px;
+            outline: none;
+            transition: 0.3s;
+        }
+        .form-group input:focus {
+            border-color: #b28b74;
+            box-shadow: 0 0 0 4px rgba(178,139,116,0.1);
+        }
+        .form-row {
+            display: flex;
+            gap: 16px;
+        }
+        .form-row .form-group {
+            flex: 1;
+        }
+        @media (max-width: 600px) {
+            .form-row { flex-direction: column; gap: 0; }
+        }
+    </style>
 </head>
 <body>
-<div id="app">
-  <div id="step-0" class="step active">
-    <h1>探索宣言</h1>
-    <p class="subtitle">科道书院 · 探索计划 · 2026迎新</p>
-    <button id="btn-start">开启探索</button>
-  </div>
 
-  <div id="step-1" class="step">
-    <h2>抽一张能力卡</h2>
-    <div class="card-grid" id="ability-cards"></div>
-    <button id="btn-draw-ability">抽取能力关键词</button>
-  </div>
-
-  <div id="step-2" class="step">
-    <h2>再抽一张感受卡</h2>
-    <div class="card-grid" id="feeling-cards"></div>
-    <button id="btn-draw-feeling">抽取感受关键词</button>
-  </div>
-
-  <div id="step-3" class="step">
-    <h2 id="type-name"></h2>
-    <p id="type-desc"></p>
-    <ul id="type-possibilities"></ul>
-    <button id="btn-next">写下我的探索宣言</button>
-  </div>
-
-  <div id="step-4" class="step">
-    <h2>写下你的探索宣言</h2>
-    <input type="text" id="input-name" placeholder="你的名字" maxlength="20" autocomplete="off">
-    <textarea id="input-declaration" placeholder="写下你对大学生活的一句期待" maxlength="50"></textarea>
-    <button id="btn-submit">提交</button>
-  </div>
-
-  <div id="step-5" class="step">
-    <h2>🎉 探索宣言生成</h2>
-    <div class="result-card">
-      <span class="badge" id="result-type"></span>
-      <p class="declaration-text" id="result-declaration"></p>
-      <p class="declaration-author" id="result-name"></p>
+<div class="container" id="app">
+    <div class="brand">
+        <span class="logo">✦ 科道书院 · 2026 探索盲盒</span>
+        <span class="step-indicator" id="stepIndicator">1 / 4</span>
     </div>
-    <p class="hint">请将这句话写在便利贴上，贴到宣言墙</p>
-    <div class="button-group">
-      <button id="btn-restart">再来一次</button>
-      <button id="btn-show-wall" class="btn-secondary">看看大家的宣言</button>
-    </div>
-  </div>
 
-  <div id="step-6" class="step">
-    <h2>📜 探索宣言墙</h2>
-    <p class="wall-intro">把每一份期待，拼成属于我们的探索星图</p>
-    <div class="wall-toolbar">
-      <div class="wall-controls">
-        <span class="wall-count">共 <strong id="wall-count">0</strong> 份宣言</span>
-      </div>
-      <div id="wall-filters" class="wall-filters"></div>
+    <!-- ===== STEP 1: 角色选择 ===== -->
+    <div class="step-page active" data-step="1">
+        <h2>🎉 你好，探索者！</h2>
+        <div class="sub">先选个身份吧，这会影响你的<em>专属路线</em>哦～</div>
+
+        <div class="role-group">
+            <div class="role-card active" data-role="participant">
+                <span class="emoji">🧭</span>
+                <div class="name">参与者</div>
+                <div class="desc">体验、打卡、发现惊喜</div>
+            </div>
+            <div class="role-card" data-role="organizer">
+                <span class="emoji">🚀</span>
+                <div class="name">组织者</div>
+                <div class="desc">策划、带飞、搞点大事</div>
+            </div>
+        </div>
+
+        <div class="btn-group">
+            <button class="btn btn-primary" id="step1Next">下一步 →</button>
+        </div>
     </div>
-    <div id="declaration-wall"></div>
-    <div class="button-group" style="margin-top:20px;">
-      <button id="btn-back-from-wall" class="btn-secondary">返回首页</button>
+
+    <!-- ===== STEP 2: 探索生涯 ===== -->
+    <div class="step-page" data-step="2">
+        <h2>📚 探索生涯</h2>
+        <div class="sub">选你感兴趣的领域，<em>多点几下</em>也没问题！</div>
+
+        <div class="module-grid" id="careerGrid">
+            <div class="module-card" data-value="lecture">
+                <span class="check">✓</span>
+                <span class="emoji">🎤</span>
+                <div class="title">学姐学长讲座</div>
+                <div class="desc">听听过来人的“避坑指南”和“开挂经验”</div>
+            </div>
+            <div class="module-card" data-value="lab">
+                <span class="check">✓</span>
+                <span class="emoji">🔬</span>
+                <div class="title">导师实验室</div>
+                <div class="desc">亲手摸一摸科研是什么感觉，超酷的！</div>
+            </div>
+            <div class="module-card" data-value="club">
+                <span class="check">✓</span>
+                <span class="emoji">🎯</span>
+                <div class="title">科道社团</div>
+                <div class="desc">找搭子、玩兴趣，17种社团等你解锁</div>
+            </div>
+            <div class="module-card" data-value="industry">
+                <span class="check">✓</span>
+                <span class="emoji">🏭</span>
+                <div class="title">探索产业</div>
+                <div class="desc">去企业瞅瞅，你的专业将来能干啥</div>
+            </div>
+        </div>
+
+        <div class="btn-group">
+            <button class="btn btn-secondary" id="step2Back">← 上一步</button>
+            <button class="btn btn-primary" id="step2Next">下一步 →</button>
+        </div>
     </div>
-  </div>
+
+    <!-- ===== STEP 3: 探索生活 ===== -->
+    <div class="step-page" data-step="3">
+        <h2>🌆 探索生活</h2>
+        <div class="sub">选你想怎么玩转上海，<em>全都想要就全选</em>！</div>
+
+        <div class="module-grid three" id="lifeGrid">
+            <div class="module-card" data-value="walk">
+                <span class="check">✓</span>
+                <span class="emoji">🚶</span>
+                <div class="title">城市行走</div>
+                <div class="desc">每月一条路线，用脚丈量上海</div>
+            </div>
+            <div class="module-card" data-value="heritage">
+                <span class="check">✓</span>
+                <span class="emoji">🏛️</span>
+                <div class="title">特色探访</div>
+                <div class="desc">钻进弄堂、老厂房，发现城市B面</div>
+            </div>
+            <div class="module-card" data-value="citywalk">
+                <span class="check">✓</span>
+                <span class="emoji">🗺️</span>
+                <div class="title">路线设计</div>
+                <div class="desc">自己设计路线，带大家认识你的上海</div>
+            </div>
+        </div>
+
+        <div class="btn-group">
+            <button class="btn btn-secondary" id="step3Back">← 上一步</button>
+            <button class="btn btn-primary" id="step3Next">下一步 →</button>
+        </div>
+    </div>
+
+    <!-- ===== STEP 4: 信息 + 结果 ===== -->
+    <div class="step-page" data-step="4">
+        <h2>🎁 你的专属探索地图</h2>
+        <div class="sub">填好信息，立刻生成你的<em>个性化路线</em>！</div>
+
+        <div class="form-group">
+            <label>你的姓名</label>
+            <input type="text" id="userName" placeholder="比如：张小明" maxlength="80" autocomplete="name" required />
+        </div>
+        <div class="form-row">
+            <div class="form-group">
+                <label>专业</label>
+                <input type="text" id="userMajor" placeholder="计算机科学" maxlength="120" autocomplete="organization-title" required />
+            </div>
+            <div class="form-group">
+                <label>邮箱</label>
+                <input type="email" id="userEmail" placeholder="shanghaitech@edu.cn" maxlength="320" autocomplete="email" required />
+            </div>
+        </div>
+
+        <div id="resultArea" style="display: none;">
+            <div class="result-box" id="selectedModulesBox">
+                <div style="color:#8a7c6f; font-size:13px; margin-bottom:8px;">你选的模块</div>
+                <div id="selectedTags"></div>
+            </div>
+            <div class="result-box">
+                <div style="color:#8a7c6f; font-size:13px; margin-bottom:8px;">🎯 给你的专属路线</div>
+                <div id="pathList"></div>
+            </div>
+        </div>
+
+        <div class="btn-group">
+            <button class="btn btn-secondary" id="step4Back">← 上一步</button>
+            <button class="btn btn-primary" id="submitBtn">✨ 开启盲盒</button>
+        </div>
+        <div class="submit-status" id="submitStatus" role="status" aria-live="polite"></div>
+    </div>
 </div>
 
 <script>
-  (function() {
-    // ---------- 数据配置 ----------
-    const ABILITY_WORDS = [
-      "组织策划", "沟通协调", "设计制作", "摄影摄像", "AI应用",
-      "排版编辑", "物资采购", "应急处理", "统筹管理", "时间管理"
-    ];
+    (function() {
+        const SUPABASE_URL = 'https://pijikicwflvrrkmhxfkx.supabase.co';
+        const SUPABASE_PUBLISHABLE_KEY = 'sb_publishable_Cw-XggfEtxYCeEi-QS49xg_EZ3wzLq8';
+        const SUBMISSIONS_TABLE = 'exploration_submissions';
+        const PAGE_VERSION = '1.0.0';
 
-    const FEELING_WORDS = [
-      "快乐", "自信", "成就感", "充实", "期待",
-      "自豪", "从容", "淡定", "温暖", "有意义感"
-    ];
+        // ----- 全局状态 -----
+        let state = {
+            step: 1,
+            role: 'participant',   // participant | organizer
+            career: [],            // selected values
+            life: [],              // selected values
+        };
 
-    const TYPE_MAP = {
-      "组织策划": {
-        name: "灵感策源地",
-        desc: "把脑洞变成行动，在落地的那一刻给自己点个赞。",
-        possibilities: [
-          "策划一次宿舍集体出游，让室友们第一次全员出动",
-          "申请成为探索计划某项活动的学生主理人",
-          "发起一个你一直想做的书院小型活动，从一张海报开始"
-        ]
-      },
-      "沟通协调": {
-        name: "链接星人",
-        desc: "在人与人的缝隙里搭桥，让每一次对话都成为能量交换。",
-        possibilities: [
-          "在下次小组作业中主动担任汇报人",
-          "参与书院跨年级交流会，认识3位不同专业的学长学姐",
-          "加入一个社团，在真实协作中练习沟通"
-        ]
-      },
-      "设计制作": {
-        name: "造物玩家",
-        desc: "从0到1做出一个东西，署名的那一刻就是高光时刻。",
-        possibilities: [
-          "为你的社团或导师组设计一张活动海报",
-          "制作一件手工作品送给即将毕业的学长学姐",
-          "报名探索计划的设计类工作坊，完成第一件个人作品"
-        ]
-      },
-      "摄影摄像": {
-        name: "生活导演",
-        desc: "用镜头截取生活切片，你的视角就是独家剧本。",
-        possibilities: [
-          "拍摄一组'我眼中的科道书院'照片，投稿书院公众号",
-          "为室友们在校园地标拍一张合影",
-          "用手机记录一次探索计划活动，尝试剪辑一支vlog"
-        ]
-      },
-      "AI应用": {
-        name: "AI搭子",
-        desc: "和新工具做朋友，在技术浪潮里找到自己的冲浪板。",
-        possibilities: [
-          "用AI工具辅助完成一次课程作业",
-          "参加学校AI主题讲座，了解一个你感兴趣的AI应用方向",
-          "尝试用AI工具生成一张'四年后的自己'想象图"
-        ]
-      },
-      "排版编辑": {
-        name: "美学特种兵",
-        desc: "让每一个字都待在它该待的地方，用秩序感打赢视觉战役。",
-        possibilities: [
-          "为一份课程报告做一次用心的排版",
-          "参与书院公众号的排版工作",
-          "整理一份个人读书笔记，分享给导师组同学"
-        ]
-      },
-      "物资采购": {
-        name: "生活主理人",
-        desc: "在预算和需求之间走钢丝，把琐碎变成靠谱的勋章。",
-        possibilities: [
-          "为一次寝室聚餐制定预算并完成采购",
-          "参与书院活动的物资准备工作",
-          "为自己制定一份月度生活开支计划"
-        ]
-      },
-      "应急处理": {
-        name: "淡定担当者",
-        desc: "别人慌了你稳了，在突发时刻成为那个'别急，有我在'。",
-        possibilities: [
-          "学习一项基础急救技能",
-          "在下次活动出现突发状况时，主动站出来帮忙协调",
-          "参与书院安全演练或心理急救培训"
-        ]
-      },
-      "统筹管理": {
-        name: "多线程战士",
-        desc: "同时开几个副本也不崩，在忙碌里打出自己的节奏。",
-        possibilities: [
-          "担任一次小组作业的组长，尝试分配任务、把控进度",
-          "报名成为探索计划迎新季的志愿者",
-          "用一张甘特图规划自己的学期目标"
-        ]
-      },
-      "时间管理": {
-        name: "时间管理大师",
-        desc: "和ddl做朋友，把每一天都活成可回收的进度条。",
-        possibilities: [
-          "用一周时间尝试番茄工作法，找到自己的专注节奏",
-          "制定一份学期时间表，给学习、社交、独处都留出位置",
-          "参加探索计划的时间管理工作坊"
-        ]
-      }
-    };
+        // ----- DOM refs -----
+        const stepPages = document.querySelectorAll('.step-page');
+        const stepIndicator = document.getElementById('stepIndicator');
+        const roleCards = document.querySelectorAll('.role-card');
+        const careerCards = document.querySelectorAll('#careerGrid .module-card');
+        const lifeCards = document.querySelectorAll('#lifeGrid .module-card');
 
-    // 浏览器端只使用 publishable key；Secret key 绝不能放进网页。
-    const SUPABASE_URL = 'https://hddpzcfxsokegbjpsaxc.supabase.co';
-    const SUPABASE_PUBLISHABLE_KEY = 'sb_publishable_n_wLDbzrJ261-6SHL3Bz4A_4pAOO6YX';
-    const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY);
-    const DECLARATIONS_TABLE = 'explore_declarations';
-    const MAX_PER_TYPE = 20;
-    let allDeclarations = [];
+        const step1Next = document.getElementById('step1Next');
+        const step2Back = document.getElementById('step2Back');
+        const step2Next = document.getElementById('step2Next');
+        const step3Back = document.getElementById('step3Back');
+        const step3Next = document.getElementById('step3Next');
+        const step4Back = document.getElementById('step4Back');
+        const submitBtn = document.getElementById('submitBtn');
+        const submitStatus = document.getElementById('submitStatus');
 
-    async function loadDeclarations() {
-      const { data, error } = await supabaseClient
-        .from(DECLARATIONS_TABLE)
-        .select('*')
-        .order('created_at', { ascending: true });
-      if (error) {
-        console.error('加载宣言失败:', error);
-        alert('暂时无法连接宣言墙，请确认已在 Supabase 执行 sql/schema.sql。');
-        allDeclarations = [];
-        return;
-      }
-      allDeclarations = data || [];
-    }
-
-    async function saveDeclaration(declarationObj) {
-      const { data, error } = await supabaseClient
-        .from(DECLARATIONS_TABLE)
-        .insert(declarationObj)
-        .select()
-        .single();
-      if (error) throw error;
-      allDeclarations.push(data);
-    }
-
-    function getTypeCount(typeName) {
-      return allDeclarations.filter(item => item.type === typeName).length;
-    }
-
-    function getAvailableAbilities() {
-      return ABILITY_WORDS.filter(word => {
-        const typeName = TYPE_MAP[word].name;
-        return getTypeCount(typeName) < MAX_PER_TYPE;
-      });
-    }
-
-    function getUniqueTypes() {
-      const types = allDeclarations.map(item => item.type);
-      return [...new Set(types)];
-    }
-
-    function populateFilter() {
-      const uniqueTypes = getUniqueTypes();
-      wallFilters.innerHTML = ['all', ...uniqueTypes].map((type, index) =>
-        `<button class="filter-chip${index === 0 ? ' active' : ''}" data-filter="${escapeHtml(type)}">${type === 'all' ? '全部' : escapeHtml(type)}</button>`
-      ).join('');
-      wallFilters.querySelectorAll('.filter-chip').forEach(btn => btn.addEventListener('click', () => {
-        wallFilters.querySelectorAll('.filter-chip').forEach(item => item.classList.remove('active'));
-        btn.classList.add('active');
-        renderWall(btn.dataset.filter);
-      }));
-    }
-
-    function renderWall(filterType = 'all') {
-      const container = document.getElementById('declaration-wall');
-      if (!container) return;
-      
-      let filtered = allDeclarations;
-      if (filterType !== 'all') {
-        filtered = allDeclarations.filter(item => item.type === filterType);
-      }
-
-      if (filtered.length === 0) {
-        document.getElementById('wall-count').textContent = '0';
-        container.innerHTML = '<div class="wall-empty">✨ 还没有宣言，快来当第一个吧！</div>';
-        return;
-      }
-      document.getElementById('wall-count').textContent = filtered.length;
-
-      const sorted = [...filtered].reverse();
-      let html = '';
-      sorted.forEach((item) => {
-        const timeStr = item.created_at ? new Date(item.created_at).toLocaleString('zh-CN', { month:'numeric', day:'numeric', hour:'2-digit', minute:'2-digit' }) : '';
-        html += `
-          <div class="wall-item">
-            <div class="wall-header">
-              <span class="wall-name">${escapeHtml(item.name)}</span>
-              <span class="wall-type">${escapeHtml(item.type)}</span>
-            </div>
-            <div class="wall-declaration"><span class="wall-quote">“</span>${escapeHtml(item.declaration)}”</div>
-            <div class="wall-actions">
-              <span class="wall-time">${timeStr}</span>
-            </div>
-          </div>
-        `;
-      });
-      container.innerHTML = html;
-
-    }
-
-    function escapeHtml(text) {
-      const map = {
-        '&': '&amp;',
-        '<': '&lt;',
-        '>': '&gt;',
-        '"': '&quot;',
-        "'": '&#039;'
-      };
-      return String(text).replace(/[&<>"']/g, m => map[m]);
-    }
-
-    let currentStep = 0;
-    let abilityWord = '';
-    let feelingWord = '';
-
-    const steps = document.querySelectorAll('.step');
-    const abilityCardsContainer = document.getElementById('ability-cards');
-    const feelingCardsContainer = document.getElementById('feeling-cards');
-
-    const btnStart = document.getElementById('btn-start');
-    const btnDrawAbility = document.getElementById('btn-draw-ability');
-    const btnDrawFeeling = document.getElementById('btn-draw-feeling');
-    const btnNext = document.getElementById('btn-next');
-    const btnSubmit = document.getElementById('btn-submit');
-    const btnRestart = document.getElementById('btn-restart');
-    const btnShowWall = document.getElementById('btn-show-wall');
-    const btnBackFromWall = document.getElementById('btn-back-from-wall');
-    const wallFilters = document.getElementById('wall-filters');
-
-    const inputName = document.getElementById('input-name');
-    const inputDeclaration = document.getElementById('input-declaration');
-
-    const typeNameEl = document.getElementById('type-name');
-    const typeDescEl = document.getElementById('type-desc');
-    const typePossibilitiesEl = document.getElementById('type-possibilities');
-    const resultType = document.getElementById('result-type');
-    const resultDeclaration = document.getElementById('result-declaration');
-    const resultName = document.getElementById('result-name');
-
-    function goToStep(step) {
-      steps.forEach(el => el.classList.remove('active'));
-      document.getElementById(`step-${step}`).classList.add('active');
-      currentStep = step;
-      if (step === 6) {
-        populateFilter();
-        renderWall('all');
-      }
-    }
-
-    function createCards(words, container) {
-      container.innerHTML = '';
-      words.forEach((word, index) => {
-        const cardDiv = document.createElement('div');
-        cardDiv.className = 'card';
-        cardDiv.dataset.index = index;
-        cardDiv.innerHTML = `
-          <div class="card-inner">
-            <div class="card-front">?</div>
-            <div class="card-back">${word}</div>
-          </div>
-        `;
-        container.appendChild(cardDiv);
-      });
-    }
-
-    function drawCardFromList(container, fullWordList, wordList, callback) {
-      const cards = container.querySelectorAll('.card');
-      cards.forEach(c => c.classList.remove('flipped', 'selected'));
-      
-      if (wordList.length === 0) {
-        alert('所有选项名额已满，感谢参与！');
-        return;
-      }
-
-      const randomIndex = Math.floor(Math.random() * wordList.length);
-      const selectedWord = wordList[randomIndex];
-      const cardIndex = fullWordList.indexOf(selectedWord);
-      
-      let count = 0;
-      const maxShuffles = 8;
-      const interval = setInterval(() => {
-        cards.forEach(card => card.classList.toggle('flipped'));
-        count++;
-        if (count >= maxShuffles) {
-          clearInterval(interval);
-          cards.forEach(c => c.classList.remove('flipped'));
-          setTimeout(() => {
-            cards[cardIndex].classList.add('flipped', 'selected');
-            callback(selectedWord);
-          }, 100);
+        // ----- 工具：切换步骤 -----
+        function goToStep(step) {
+            state.step = step;
+            stepPages.forEach((page, idx) => {
+                page.classList.toggle('active', (idx + 1) === step);
+            });
+            stepIndicator.textContent = step + ' / 4';
+            window.scrollTo({ top: 0, behavior: 'smooth' });
         }
-      }, 120);
-    }
 
-    function showType() {
-      const typeData = TYPE_MAP[abilityWord];
-      typeNameEl.textContent = `你的专属探索类型：${typeData.name}`;
-      typeDescEl.textContent = typeData.desc;
-      typePossibilitiesEl.innerHTML = typeData.possibilities.map(p => `<li>${p}</li>`).join('');
-      goToStep(3);
-    }
+        // ----- 角色选择 -----
+        roleCards.forEach(card => {
+            card.addEventListener('click', function() {
+                roleCards.forEach(c => c.classList.remove('active'));
+                this.classList.add('active');
+                state.role = this.dataset.role;
+            });
+        });
 
-    createCards(ABILITY_WORDS, abilityCardsContainer);
-    createCards(FEELING_WORDS, feelingCardsContainer);
+        // ----- 模块点击 (生涯) -----
+        careerCards.forEach(card => {
+            card.addEventListener('click', function() {
+                this.classList.toggle('active');
+                const val = this.dataset.value;
+                if (this.classList.contains('active')) {
+                    if (!state.career.includes(val)) state.career.push(val);
+                } else {
+                    state.career = state.career.filter(v => v !== val);
+                }
+            });
+        });
 
-    btnStart.addEventListener('click', () => {
-      const available = getAvailableAbilities();
-      if (available.length === 0) {
-        alert('所有探索类型名额已满，感谢参与！');
-        return;
-      }
-      goToStep(1);
-    });
+        // ----- 模块点击 (生活) -----
+        lifeCards.forEach(card => {
+            card.addEventListener('click', function() {
+                this.classList.toggle('active');
+                const val = this.dataset.value;
+                if (this.classList.contains('active')) {
+                    if (!state.life.includes(val)) state.life.push(val);
+                } else {
+                    state.life = state.life.filter(v => v !== val);
+                }
+            });
+        });
 
-    btnDrawAbility.addEventListener('click', function() {
-      const available = getAvailableAbilities();
-      if (available.length === 0) {
-        alert('所有探索类型名额已满，感谢参与！');
-        return;
-      }
-      this.disabled = true;
-      this.textContent = '抽取中...';
-      
-      drawCardFromList(abilityCardsContainer, ABILITY_WORDS, available, (word) => {
-        abilityWord = word;
-        this.textContent = `你抽到了：${word}`;
-        setTimeout(() => {
-          this.disabled = false;
-          this.textContent = '抽取能力关键词';
-          goToStep(2);
-        }, 800);
-      });
-    });
+        // ----- 导航按钮 -----
+        step1Next.addEventListener('click', function() {
+            goToStep(2);
+        });
 
-    btnDrawFeeling.addEventListener('click', function() {
-      this.disabled = true;
-      this.textContent = '抽取中...';
-      drawCardFromList(feelingCardsContainer, FEELING_WORDS, FEELING_WORDS, (word) => {
-        feelingWord = word;
-        this.textContent = `你抽到了：${word}`;
-        setTimeout(() => {
-          this.disabled = false;
-          this.textContent = '抽取感受关键词';
-          showType();
-        }, 800);
-      });
-    });
+        step2Back.addEventListener('click', function() { goToStep(1); });
+        step2Next.addEventListener('click', function() {
+            if (state.career.length === 0) {
+                alert('至少选一个生涯模块哦～不然怎么帮你规划呢？');
+                return;
+            }
+            goToStep(3);
+        });
 
-    btnNext.addEventListener('click', () => {
-      goToStep(4);
-    });
+        step3Back.addEventListener('click', function() { goToStep(2); });
+        step3Next.addEventListener('click', function() {
+            if (state.life.length === 0) {
+                alert('至少选一个生活模块，不然上海之旅不完整！');
+                return;
+            }
+            goToStep(4);
+            generateResult();
+        });
 
-    btnSubmit.addEventListener('click', async () => {
-      const name = inputName.value.trim();
-      const declaration = inputDeclaration.value.trim();
-      if (!name) {
-        alert('请输入你的名字');
-        return;
-      }
-      if (!declaration) {
-        alert('请写下你的探索宣言');
-        return;
-      }
+        step4Back.addEventListener('click', function() { goToStep(3); });
 
-      const typeName = TYPE_MAP[abilityWord].name;
-      if (getTypeCount(typeName) >= MAX_PER_TYPE) {
-        alert('该探索类型名额已满，请返回重新抽取。');
-        goToStep(0);
-        return;
-      }
+        // ----- 生成结果 -----
+        function generateResult() {
+            const careerNames = [];
+            const lifeNames = [];
+            careerCards.forEach(c => {
+                if (c.classList.contains('active')) {
+                    careerNames.push(c.querySelector('.title').innerText);
+                }
+            });
+            lifeCards.forEach(c => {
+                if (c.classList.contains('active')) {
+                    lifeNames.push(c.querySelector('.title').innerText);
+                }
+            });
 
-      const newDeclaration = {
-        name: name,
-        ability: abilityWord,
-        feeling: feelingWord,
-        type: typeName,
-        declaration: declaration,
-        created_at: new Date().toISOString()
-      };
-      btnSubmit.disabled = true;
-      try {
-        await saveDeclaration(newDeclaration);
-      } catch (error) {
-        alert('提交失败：' + error.message);
-        btnSubmit.disabled = false;
-        return;
-      }
-      btnSubmit.disabled = false;
+            const tagsContainer = document.getElementById('selectedTags');
+            const allSelected = [...careerNames, ...lifeNames];
+            tagsContainer.innerHTML = allSelected.map(t => `<span class="tag">${t}</span>`).join('');
 
-      resultType.textContent = typeName;
-      resultDeclaration.textContent = `“${declaration}”`;
-      resultName.textContent = `—— ${name}`;
-      goToStep(5);
-    });
+            const paths = [];
+            if (careerNames.length > 0) {
+                let step1 = '';
+                if (state.career.includes('lecture')) step1 += '🎤 听学长姐唠唠“真心话”，避坑+开挂；';
+                if (state.career.includes('lab')) step1 += '🔬 进实验室摸一摸，说不定就爱上科研了；';
+                if (state.career.includes('club')) step1 += '🎯 去社团找搭子，一起玩点好玩的；';
+                if (state.career.includes('industry')) step1 += '🏭 去企业逛一圈，看看你未来的工位长啥样；';
+                if (step1) paths.push('📌 生涯探索：' + step1.slice(0, -1) + '。把这些都试一遍，你就能找到自己的“真香”方向！');
+            }
 
-    btnRestart.addEventListener('click', () => {
-      abilityWord = '';
-      feelingWord = '';
-      inputName.value = '';
-      inputDeclaration.value = '';
-      btnDrawAbility.textContent = '抽取能力关键词';
-      btnDrawFeeling.textContent = '抽取感受关键词';
-      document.querySelectorAll('.card').forEach(c => c.classList.remove('flipped', 'selected'));
-      goToStep(0);
-    });
+            if (lifeNames.length > 0) {
+                let step2 = '';
+                if (state.life.includes('walk')) step2 += '🚶 跟着路线走，每条街都有故事；';
+                if (state.life.includes('heritage')) step2 += '🏛️ 钻进弄堂老厂房，发现上海隐藏副本；';
+                if (state.life.includes('citywalk')) step2 += '🗺️ 自己设计一条路线，当一回城市导游；';
+                if (step2) paths.push('📍 生活扎根：' + step2.slice(0, -1) + '。这些体验会让你觉得“上海是我家”！');
+            }
 
-    btnShowWall.addEventListener('click', () => {
-      goToStep(6);
-    });
+            if (careerNames.length > 0 && lifeNames.length > 0) {
+                paths.push('🌟 高阶玩法：把专业兴趣和城市探索混搭，比如去产业参访时顺带逛周边街区，或者用社团活动策划一场城市快闪——你的大学故事，由你定义！');
+            } else {
+                paths.push('🚀 还没想好怎么组合？没关系，先专注你感兴趣的领域，慢慢来，比较快。');
+            }
 
-    btnBackFromWall.addEventListener('click', () => {
-      goToStep(0);
-    });
+            if (state.role === 'organizer') {
+                paths.push('💡 作为组织者，你可以主动发起活动，把想法变成现实，书院会支持你哦！');
+            } else {
+                paths.push('💡 作为参与者，你只需要带着好奇心，大胆去试，惊喜会自己找上门！');
+            }
 
-    loadDeclarations();
+            const pathList = document.getElementById('pathList');
+            pathList.innerHTML = paths.map(p => `<div class="path-item"><span class="emoji">✦</span>${p}</div>`).join('');
 
-    document.addEventListener('touchstart', function(event) {
-      if (event.touches.length > 1) {
-        event.preventDefault();
-      }
-    }, { passive: false });
+            document.getElementById('resultArea').style.display = 'block';
+            return { selectedModules: allSelected, generatedPaths: paths };
+        }
 
-    let lastTouchEnd = 0;
-    document.addEventListener('touchend', function(event) {
-      const now = (new Date()).getTime();
-      if (now - lastTouchEnd <= 300) {
-        event.preventDefault();
-      }
-      lastTouchEnd = now;
-    }, false);
-  })();
+        // ----- 提交 -----
+        submitBtn.addEventListener('click', async function() {
+            const name = document.getElementById('userName').value.trim();
+            const major = document.getElementById('userMajor').value.trim();
+            const email = document.getElementById('userEmail').value.trim();
+            if (!name || !major || !email) {
+                alert('请填完信息，不然没法生成你的专属路线哦～');
+                return;
+            }
+            if (!document.getElementById('userEmail').checkValidity()) {
+                alert('邮箱好像不太对，再检查一下？');
+                return;
+            }
+
+            const result = generateResult();
+
+            const submission = {
+                name,
+                major,
+                email,
+                role: state.role,
+                career: [...state.career],
+                life: [...state.life],
+                selected_modules: result.selectedModules,
+                generated_paths: result.generatedPaths,
+                client_submitted_at: new Date().toISOString(),
+                user_agent: navigator.userAgent,
+                page_version: PAGE_VERSION
+            };
+
+            submitBtn.textContent = '正在保存…';
+            submitBtn.disabled = true;
+            submitStatus.className = 'submit-status';
+            submitStatus.textContent = '正在安全保存你的探索信息…';
+
+            try {
+                const response = await fetch(`${SUPABASE_URL}/rest/v1/${SUBMISSIONS_TABLE}`, {
+                    method: 'POST',
+                    headers: {
+                        'apikey': SUPABASE_PUBLISHABLE_KEY,
+                        'Content-Type': 'application/json',
+                        'Prefer': 'return=minimal'
+                    },
+                    body: JSON.stringify(submission)
+                });
+
+                if (!response.ok) {
+                    const detail = await response.text();
+                    console.error('Supabase submission failed:', response.status, detail);
+                    throw new Error(`保存失败（${response.status}）`);
+                }
+
+                submitBtn.textContent = '✅ 已开启！';
+                submitStatus.className = 'submit-status success';
+                submitStatus.textContent = '保存成功，你的专属探索路线已生成。';
+                alert('🎉 盲盒开启成功！你的专属探索路线已生成！');
+            } catch (error) {
+                console.error(error);
+                submitBtn.textContent = '重新保存';
+                submitBtn.disabled = false;
+                submitStatus.className = 'submit-status error';
+                submitStatus.textContent = '暂时无法保存，请检查网络后重试。你的选择不会丢失。';
+                alert('保存失败，请稍后重试。');
+            }
+        });
+
+        // 监听输入变化
+        document.querySelectorAll('[data-step="4"] input').forEach(inp => {
+            inp.addEventListener('input', function() {
+                if (document.getElementById('resultArea').style.display === 'block') {
+                    generateResult();
+                }
+            });
+        });
+
+        careerCards.forEach(c => c.addEventListener('click', function() {
+            if (state.step === 4) generateResult();
+        }));
+        lifeCards.forEach(c => c.addEventListener('click', function() {
+            if (state.step === 4) generateResult();
+        }));
+
+        goToStep(1);
+    })();
 </script>
+
 </body>
 </html>
