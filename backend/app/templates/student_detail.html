@@ -1,0 +1,20 @@
+{% extends "base.html" %}
+{% block content %}
+<header class="page-header"><div><p class="kicker">STUDENT DETAIL</p><h1>{{ student.name or '待首次填写' }}</h1><p>{{ student.student_number }} · {{ student.email }} · {{ student.major or '专业待补充' }}</p></div><div class="header-actions"><form method="post" action="/students/{{ student.id }}/retry"><input type="hidden" name="csrf_token" value="{{ csrf_token }}"><button class="button primary">重新生成画像</button></form><form method="post" action="/students/{{ student.id }}/withdraw" onsubmit="return confirm('确认将该学生标记为撤回同意？')"><input type="hidden" name="csrf_token" value="{{ csrf_token }}"><button class="button danger">撤回同意</button></form></div></header>
+<div class="two-columns student-layout">
+  <section class="panel">
+    <div class="panel-title"><div><p class="kicker">CURRENT MODEL</p><h2>当前画像</h2></div><span class="status {{ student.model_status }}">{{ student.model_status }}</span></div>
+    {% if models %}{% set profile=models[0].profile %}<p class="report-overview">{{ models[0].summary }}</p>
+      {% for key,label in [('current_state','现状'),('interests','兴趣'),('engagement_and_clubs','参与与社团'),('skills_and_self_regulation','自我调节'),('wellbeing_and_support_preferences','状态与支持偏好'),('constraints','现实限制'),('recommendation_profile','推荐偏好')] %}
+      <details class="model-section" {% if loop.index < 4 %}open{% endif %}><summary>{{ label }} <span>{{ profile.get(key,[])|length }}</span></summary><ul>{% for item in profile.get(key,[]) %}<li><b>{{ item.statement }}</b><small>置信度 {{ item.confidence }} · {{ item.evidence_refs|join(', ') }}</small></li>{% endfor %}</ul></details>{% endfor %}
+      {% if profile.advisor_attention %}<div class="attention"><h3>建议关注</h3>{% for item in profile.advisor_attention %}<p><span class="status {{ item.priority }}">{{ item.priority }}</span> {{ item.note }}</p>{% endfor %}</div>{% endif %}
+    {% else %}<div class="empty">尚未生成画像。首次回答后会自动进入队列。</div>{% endif %}
+  </section>
+  <section class="panel">
+    <div class="panel-title"><div><p class="kicker">HISTORY</p><h2>版本与原始证据</h2></div></div>
+    <h3>画像版本</h3><div class="history-list">{% for model in models %}<details><summary>V{{ model.version }} · {{ model.generated_at[:16]|replace('T',' ') }}</summary><pre>{{ model.profile|tojson(indent=2) }}</pre></details>{% else %}<p class="muted">无版本</p>{% endfor %}</div>
+    <h3>首次问卷</h3><div class="history-list">{% for item in onboarding %}<details><summary>{{ item.submitted_at[:16]|replace('T',' ') }}</summary><pre>{{ item.answers|tojson(indent=2) }}</pre></details>{% else %}<p class="muted">无回答</p>{% endfor %}</div>
+    <h3>跟进回答</h3><div class="history-list">{% for item in responses %}<details><summary>{{ item.submitted_at[:16]|replace('T',' ') }}</summary><pre>{{ item.answers|tojson(indent=2) }}</pre></details>{% else %}<p class="muted">无回答</p>{% endfor %}</div>
+  </section>
+</div>
+{% endblock %}

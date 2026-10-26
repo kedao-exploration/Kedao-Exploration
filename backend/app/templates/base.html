@@ -1,0 +1,30 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{% block title %}科道书院 · Advisor{% endblock %}</title>
+  <link rel="stylesheet" href="/static/admin.css">
+</head>
+<body>
+  {% if advisor %}
+  <aside class="sidebar">
+    <a class="admin-brand" href="/"><span>✦</span><div><b>科道书院</b><small>ADVISOR CONSOLE</small></div></a>
+    <nav>
+      <a href="/" class="{% if request.url.path == '/' %}active{% endif %}">总览</a>
+      <a href="/students" class="{% if request.url.path.startswith('/students') %}active{% endif %}">学生画像</a>
+      <a href="/activities" class="{% if request.url.path.startswith('/activities') or request.url.path.startswith('/campaigns') %}active{% endif %}">活动与推送</a>
+      <a href="/surveys" class="{% if request.url.path.startswith('/surveys') %}active{% endif %}">跟进问卷</a>
+    </nav>
+    <div class="sidebar-foot">
+      <span class="status-dot"></span> 内网试点
+      <form action="/logout" method="post"><input type="hidden" name="csrf_token" value="{{ csrf_token }}"><button>退出登录</button></form>
+    </div>
+  </aside>
+  {% endif %}
+  <main class="{% if advisor %}admin-main{% else %}login-main{% endif %}">
+    {% block content %}{% endblock %}
+  </main>
+  <script src="/static/admin.js" defer></script>
+</body>
+</html>

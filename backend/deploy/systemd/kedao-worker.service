@@ -1,0 +1,21 @@
+[Unit]
+Description=Kedao student-model worker
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=eddie-cui
+Group=eddie-cui
+WorkingDirectory=/home/eddie-cui/code/discover-backend
+EnvironmentFile=/home/eddie-cui/code/discover-backend/.env
+ExecStart=/home/eddie-cui/code/discover-backend/.venv/bin/python -m app.worker
+Restart=on-failure
+RestartSec=10
+PrivateTmp=true
+NoNewPrivileges=true
+ProtectSystem=strict
+ReadWritePaths=/home/eddie-cui/code/discover-backend/data
+
+[Install]
+WantedBy=multi-user.target

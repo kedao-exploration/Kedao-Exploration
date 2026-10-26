@@ -1,0 +1,15 @@
+[Unit]
+Description=Kedao daily Supabase snapshot
+After=network-online.target
+
+[Service]
+Type=oneshot
+User=eddie-cui
+Group=eddie-cui
+WorkingDirectory=/home/eddie-cui/code/discover-backend
+EnvironmentFile=/home/eddie-cui/code/discover-backend/.env
+ExecStart=/home/eddie-cui/code/discover-backend/.venv/bin/python -m app.snapshot
+PrivateTmp=true
+NoNewPrivileges=true
+ProtectSystem=strict
+ReadWritePaths=/home/eddie-cui/code/discover-backend/data

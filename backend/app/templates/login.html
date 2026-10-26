@@ -1,0 +1,18 @@
+{% extends "base.html" %}
+{% block title %}Advisor 登录 · 科道书院{% endblock %}
+{% block content %}
+<section class="login-card">
+  <div class="login-mark">✦</div>
+  <p class="kicker">KEDAO COLLEGE</p>
+  <h1>培养工作台</h1>
+  <p class="muted">仅限书院培养老师通过校内网络或 VPN 使用</p>
+  {% if error %}<div class="alert error">{{ error }}</div>{% endif %}
+  <form action="/login" method="post" class="stack-form">
+    <input type="hidden" name="next" value="{{ next }}">
+    <label>用户名<input name="username" autocomplete="username" required></label>
+    <label>密码<input name="password" type="password" autocomplete="current-password" required></label>
+    <button class="button primary" type="submit">安全登录</button>
+  </form>
+  <p class="tiny">系统含学生个人与幸福感信息，请勿共享账号或在公共设备上保持登录。</p>
+</section>
+{% endblock %}
