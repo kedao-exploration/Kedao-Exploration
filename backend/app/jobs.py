@@ -88,15 +88,29 @@ def process_activity_run(db: Supabase, llm: LLMService, run: dict[str, Any]) -> 
         recipients = []
         for student in students:
             if not student.get("current_model_version_id"):
+                recipients.append({
+                    "campaign_id": campaign["id"], "student_id": student["id"], "source": "llm", "included": False,
+                    "recommendation": {
+                        "include": False, "fit_score": 0, "interest_score": 0, "need_score": 0, "availability_score": 0,
+                        "reasons": ["尚无可用画像，需 advisor 人工判断"], "evidence_refs": [], "caution": "student_model_missing",
+                    },
+                })
                 continue
             rows = db.select("student_model_versions", select="profile", params={"id": f"eq.{student['current_model_version_id']}"}, limit=1)
             if not rows:
+                recipients.append({
+                    "campaign_id": campaign["id"], "student_id": student["id"], "source": "llm", "included": False,
+                    "recommendation": {
+                        "include": False, "fit_score": 0, "interest_score": 0, "need_score": 0, "availability_score": 0,
+                        "reasons": ["画像版本不可用，需 advisor 人工判断"], "evidence_refs": [], "caution": "student_model_unavailable",
+                    },
+                })
                 continue
             match = llm.match_activity(activity, student["id"], rows[0]["profile"])
             recipients.append({"campaign_id": campaign["id"], "student_id": student["id"], "recommendation": match.model_dump(), "source": "llm", "included": match.include})
         if recipients:
             db.insert("campaign_recipients", recipients, returning=False)
-        db.update("activity_match_runs", {"status": "completed", "student_count": len(students), "completed_at": iso(utcnow())}, filters={"id": f"eq.{run_id}"})
+        db.update("activity_match_runs", {"status": "completed", "student_count": len(recipients), "completed_at": iso(utcnow())}, filters={"id": f"eq.{run_id}"})
         db.update("activities", {"status": "ready"}, filters={"id": f"eq.{activity['id']}"})
     except Exception as exc:
         db.update("activity_match_runs", {"status": "failed", "last_error": str(exc)[:2000]}, filters={"id": f"eq.{run_id}"})

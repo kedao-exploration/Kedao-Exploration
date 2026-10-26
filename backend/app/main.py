@@ -64,6 +64,15 @@ def require_csrf(request: Request, token: str) -> None:
         raise HTTPException(403, "CSRF validation failed")
 
 
+def require_campaign_editable(campaign_id: str) -> dict:
+    rows = db.select("campaigns", select="id,status", params={"id": f"eq.{campaign_id}"}, limit=1)
+    if not rows:
+        raise HTTPException(404, "名单不存在")
+    if rows[0]["status"] in {"confirmed", "exported"}:
+        raise HTTPException(409, "最终名单已确认，不能再修改")
+    return rows[0]
+
+
 @app.get("/health")
 def health():
     return {"ok": True, "service": "kedao-discover-backend"}
@@ -238,7 +247,9 @@ def campaign_page(request: Request, campaign_id: str):
 def update_recipient(request: Request, campaign_id: str, recipient_id: str, csrf_token: Annotated[str, Form()], included: Annotated[str, Form()] = "false", advisor_note: Annotated[str, Form()] = ""):
     if redirect := require_page_login(request): return redirect
     require_csrf(request, csrf_token)
+    require_campaign_editable(campaign_id)
     db.update("campaign_recipients", {"included": included == "true", "advisor_note": advisor_note[:1000]}, filters={"id": f"eq.{recipient_id}", "campaign_id": f"eq.{campaign_id}"})
+    db.insert("audit_logs", {"actor": settings.advisor_username, "action": "campaign_recipient_updated", "entity_type": "campaign", "entity_id": campaign_id, "details": {"recipient_id": recipient_id, "included": included == "true", "reason": advisor_note[:1000]}}, returning=False)
     return RedirectResponse(f"/campaigns/{campaign_id}", status_code=303)
 
 
@@ -246,7 +257,9 @@ def update_recipient(request: Request, campaign_id: str, recipient_id: str, csrf
 def add_recipient(request: Request, campaign_id: str, student_id: Annotated[str, Form()], csrf_token: Annotated[str, Form()]):
     if redirect := require_page_login(request): return redirect
     require_csrf(request, csrf_token)
-    db.upsert("campaign_recipients", {"campaign_id": campaign_id, "student_id": student_id, "source": "advisor", "included": True, "recommendation": {"reasons": ["advisor 手动加入"]}}, on_conflict="campaign_id,student_id")
+    require_campaign_editable(campaign_id)
+    db.upsert("campaign_recipients", {"campaign_id": campaign_id, "student_id": student_id, "source": "advisor", "included": True, "advisor_note": "advisor 手动加入", "recommendation": {"reasons": ["advisor 手动加入"]}}, on_conflict="campaign_id,student_id")
+    db.insert("audit_logs", {"actor": settings.advisor_username, "action": "campaign_recipient_added", "entity_type": "campaign", "entity_id": campaign_id, "details": {"student_id": student_id, "reason": "advisor 手动加入"}}, returning=False)
     return RedirectResponse(f"/campaigns/{campaign_id}", status_code=303)
 
 
@@ -254,6 +267,7 @@ def add_recipient(request: Request, campaign_id: str, student_id: Annotated[str,
 def confirm_campaign(request: Request, campaign_id: str, csrf_token: Annotated[str, Form()]):
     if redirect := require_page_login(request): return redirect
     require_csrf(request, csrf_token)
+    require_campaign_editable(campaign_id)
     db.update("campaigns", {"status": "confirmed", "confirmed_at": datetime.now(SHANGHAI).isoformat()}, filters={"id": f"eq.{campaign_id}"})
     db.insert("audit_logs", {"actor": settings.advisor_username, "action": "campaign_confirmed", "entity_type": "campaign", "entity_id": campaign_id}, returning=False)
     return RedirectResponse(f"/campaigns/{campaign_id}", status_code=303)
@@ -262,6 +276,9 @@ def confirm_campaign(request: Request, campaign_id: str, csrf_token: Annotated[s
 @app.get("/campaigns/{campaign_id}/export")
 def export_campaign(request: Request, campaign_id: str):
     if redirect := require_page_login(request): return redirect
+    campaign = db.select("campaigns", select="status", params={"id": f"eq.{campaign_id}"}, limit=1)
+    if not campaign or campaign[0]["status"] not in {"confirmed", "exported"}:
+        raise HTTPException(409, "请先确认最终名单再导出")
     rows = db.select("campaign_recipients", select="student:students(name,email,student_number,major),advisor_note", params={"campaign_id": f"eq.{campaign_id}", "included": "eq.true"})
     output = io.StringIO(); writer = csv.writer(output); writer.writerow(["姓名", "邮箱", "学号", "专业", "advisor_note"])
     for row in rows:
@@ -273,16 +290,16 @@ def export_campaign(request: Request, campaign_id: str):
 def surveys_page(request: Request):
     if redirect := require_page_login(request): return redirect
     surveys = db.select("survey_definitions", params={"order": "created_at.desc"})
-    campaigns = db.select("campaigns", select="id,name,status", params={"status": "eq.confirmed", "order": "created_at.desc"})
+    campaigns = db.select("campaigns", select="id,name,status", params={"status": "in.(confirmed,exported)", "order": "created_at.desc"})
     return templates.TemplateResponse("surveys.html", page_context(request, surveys=surveys, campaigns=campaigns, validation_error=None))
 
 
 @app.post("/surveys")
-def create_survey(request: Request, csrf_token: Annotated[str, Form()], title: Annotated[str, Form()], description: Annotated[str, Form()] = "", schema_json: Annotated[str, Form()] = ""):
+def create_survey(request: Request, csrf_token: Annotated[str, Form()], title: Annotated[str, Form()], description: Annotated[str, Form()] = "", schema_definition: Annotated[str, Form(alias="schema_json")] = ""):
     if redirect := require_page_login(request): return redirect
     require_csrf(request, csrf_token)
     try:
-        schema = SurveySchema.model_validate_json(schema_json)
+        schema = SurveySchema.model_validate_json(schema_definition)
     except ValidationError as exc:
         raise HTTPException(400, f"问卷定义不合法：{exc}") from exc
     db.insert("survey_definitions", {"title": title.strip(), "description": description.strip() or None, "schema": schema.model_dump(by_alias=True)})
