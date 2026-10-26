@@ -1,0 +1,7 @@
+{% extends "base.html" %}
+{% block content %}
+<header class="page-header"><div><p class="kicker">PERSONAL SURVEY LINKS</p><h1>个人问卷链接</h1><p>链接只显示这一次。请复制后通过你选择的渠道发送。</p></div><a class="button" href="/surveys">返回问卷</a></header>
+<section class="panel copy-panel"><div><b>全部链接</b><p class="muted">本次新生成 {{ links|length }} 条</p></div><textarea id="survey-link-list" rows="8" readonly>{% for item in links %}{{ item.name or item.student_number }}　{{ item.email }}　{{ item.url }}{% if not loop.last %}
+{% endif %}{% endfor %}</textarea><button class="button primary" type="button" data-copy-target="survey-link-list">复制全部</button></section>
+<section class="panel table-wrap"><table><thead><tr><th>学生</th><th>邮箱</th><th>个人链接</th><th></th></tr></thead><tbody>{% for item in links %}<tr><td><b>{{ item.name or item.student_number }}</b><small>{{ item.student_number }}</small></td><td>{{ item.email }}</td><td><code class="link-code">{{ item.url }}</code></td><td><button class="button small" type="button" data-copy-text="{{ item.url }}">复制链接</button></td></tr>{% else %}<tr><td colspan="4" class="empty">没有新链接；所选学生可能已分配过这份问卷。</td></tr>{% endfor %}</tbody></table></section>
+{% endblock %}

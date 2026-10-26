@@ -1,0 +1,24 @@
+.invite-result {
+  display: grid;
+  grid-template-columns: minmax(240px, .75fr) minmax(320px, 1.25fr);
+  gap: 28px;
+  align-items: start;
+  border-color: #c9dfd0;
+  background: #fbfefb;
+}
+.invite-result h2 { margin: 4px 0 8px; }
+.copy-card, .copy-panel { display: grid; gap: 10px; }
+.copy-card label { display: grid; gap: 6px; color: var(--muted); font-size: 10px; }
+.copy-card code, .link-code { overflow-wrap: anywhere; color: #174e3f; }
+.copy-card code { padding: 12px; border: 1px dashed #b9d0c0; border-radius: 9px; background: white; font-size: 15px; }
+.copy-panel { grid-template-columns: minmax(150px, .35fr) minmax(300px, 1fr) auto; align-items: center; }
+.copy-panel textarea { width: 100%; resize: vertical; }
+.student-picker { max-height: 260px; overflow: auto; border: 1px solid var(--line); border-radius: 11px; padding: 12px; }
+.student-picker legend { padding: 0 5px; color: #617067; font-size: 11px; font-weight: 700; }
+.student-picker label { grid-template-columns: auto 1fr; align-items: start; padding: 8px; border-bottom: 1px solid #edf0ec; cursor: pointer; }
+.student-picker label:last-child { border-bottom: 0; }
+.student-picker input { margin-top: 3px; }
+.student-picker small { display: block; color: var(--muted); font-weight: 400; }
+@media(max-width:700px) {
+  .invite-result, .copy-panel { grid-template-columns: 1fr; }
+}

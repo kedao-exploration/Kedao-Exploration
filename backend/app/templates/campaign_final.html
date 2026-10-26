@@ -1,0 +1,6 @@
+{% extends "base.html" %}
+{% block content %}
+<header class="page-header"><div><p class="kicker">CONFIRMED RECIPIENTS</p><h1>最终推送名单</h1><p>名单已锁定。可直接复制全部邮箱，邮件发送仍保持关闭。</p></div><a class="button" href="/campaigns/{{ campaign_id }}">返回名单</a></header>
+<section class="panel copy-panel"><div><b>全部邮箱</b><p class="muted">共 {{ rows|length }} 人</p></div><textarea id="final-emails" rows="5" readonly>{% for row in rows %}{{ row.student.email }}{% if not loop.last %}; {% endif %}{% endfor %}</textarea><button class="button primary" type="button" data-copy-target="final-emails">复制全部邮箱</button></section>
+<section class="panel table-wrap"><table><thead><tr><th>姓名</th><th>邮箱</th><th>学号</th><th>专业</th><th>调整说明</th></tr></thead><tbody>{% for row in rows %}<tr><td><b>{{ row.student.name or '—' }}</b></td><td>{{ row.student.email }}</td><td>{{ row.student.student_number }}</td><td>{{ row.student.major or '—' }}</td><td>{{ row.advisor_note or '—' }}</td></tr>{% else %}<tr><td colspan="5" class="empty">最终名单为空。</td></tr>{% endfor %}</tbody></table></section>
+{% endblock %}

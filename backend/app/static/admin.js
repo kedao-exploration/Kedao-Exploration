@@ -8,6 +8,29 @@ document.addEventListener("click", (event) => {
     form.action = `/surveys/${assign.dataset.assignSurvey}/assign`;
     document.getElementById("assign-dialog")?.showModal();
   }
+  const copyButton = event.target.closest("[data-copy-text], [data-copy-target]");
+  if (copyButton) {
+    const target = copyButton.dataset.copyTarget && document.getElementById(copyButton.dataset.copyTarget);
+    const value = copyButton.dataset.copyText || target?.value || target?.textContent || "";
+    const copy = navigator.clipboard?.writeText
+      ? navigator.clipboard.writeText(value)
+      : new Promise((resolve, reject) => {
+          const helper = document.createElement("textarea");
+          helper.value = value;
+          helper.style.position = "fixed";
+          helper.style.opacity = "0";
+          document.body.appendChild(helper);
+          helper.select();
+          const ok = document.execCommand("copy");
+          helper.remove();
+          ok ? resolve() : reject(new Error("copy failed"));
+        });
+    copy.then(() => {
+      const previous = copyButton.textContent;
+      copyButton.textContent = "已复制";
+      window.setTimeout(() => { copyButton.textContent = previous; }, 1600);
+    }).catch(() => { copyButton.textContent = "请手动选择复制"; });
+  }
 });
 
 const builder = document.getElementById("survey-builder");

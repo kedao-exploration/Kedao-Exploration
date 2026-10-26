@@ -4,7 +4,7 @@
 
 - GitHub Pages 学生端：首次画像采集与动态跟进问卷；
 - Supabase：一次性邀请、版本化问卷、画像、活动和推送名单；
-- FastAPI advisor 后台：学生画像、群体洞察、活动匹配、名单确认与 CSV 导出；
+- FastAPI advisor 后台：学生画像、群体洞察、活动匹配、名单确认与网页内复制；
 - SiliconFlow `deepseek-ai/DeepSeek-V4-Flash`：结构化、带证据的画像与推荐；
 - systemd worker、每日快照和群体报告。
 
@@ -69,4 +69,4 @@ cp .env.example .env
 - 后端再次清洗邮箱、手机号和长数字编号。
 - 幸福感数据只用于自愿支持，不作医学诊断，也不能用于普通活动的负面筛选。
 - 每个模型结论包含 `evidence_refs`、置信度、生成时间、输入快照和 prompt 版本。
-- 邮件发送未实现；系统只保存/导出 advisor 确认后的名单。
+- 邮件发送未实现；系统保存 advisor 确认后的名单，并在受保护页面内提供复制功能。
