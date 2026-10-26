@@ -8,6 +8,8 @@
 - SiliconFlow `deepseek-ai/DeepSeek-V4-Flash`：结构化、带证据的画像与推荐；
 - systemd worker、每日快照和群体报告。
 
+首次采集的第六步采用“三版本奥德赛计划”：当前轨迹延续、原路径失效后的备选，以及暂不考虑金钱和社会期待时最想尝试的人生。三个版本均以结构化字段保存，并在画像中作为假设可能性而非既定承诺处理。
+
 ## 学生端
 
 ```bash
@@ -31,9 +33,10 @@ GitHub Pages workflow 从仓库 Variables 读取：
 
 ## Supabase
 
-在 SQL Editor 执行：
-
-[`supabase/migrations/202610260001_student_modeling.sql`](supabase/migrations/202610260001_student_modeling.sql)
+在 SQL Editor 按文件名顺序执行迁移。新项目先执行
+[`202610260001_student_modeling.sql`](supabase/migrations/202610260001_student_modeling.sql)，
+已有项目继续执行
+[`202610260002_odyssey_plans.sql`](supabase/migrations/202610260002_odyssey_plans.sql)。
 
 匿名用户不能直接操作任何数据表，只能调用：
 

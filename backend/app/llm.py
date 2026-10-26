@@ -70,7 +70,8 @@ class LLMService:
         system = """你是科道书院的学生画像分析器。只依据提供的证据建立可更新、可解释的学生模型。
 要求：1) 不诊断心理疾病，不贴人格或能力标签；2) 事实和推断都必须给出 evidence_refs；
 3) 不补造经历；证据不足时写入 uncertainties；4) 心理状态只用于自愿支持，不用于普通活动排除；
-5) summary 控制在 180 字以内；6) 不输出姓名、邮箱、学号或其他可识别信息。"""
+5) odyssey_a/b/c 是平行的假设情景，不是学生已经承诺的目标，必须作为可能性分别保留；
+6) summary 控制在 180 字以内；7) 不输出姓名、邮箱、学号或其他可识别信息。"""
         return self._complete(StudentModel, system, {"student_ref": student_ref, "evidence": evidence}, "student_model")
 
     def build_aggregate_report(self, metrics: dict[str, Any], profiles: list[dict[str, Any]]) -> AggregateReport:
