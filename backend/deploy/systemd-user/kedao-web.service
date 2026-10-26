@@ -1,0 +1,17 @@
+[Unit]
+Description=Kedao advisor web (internal network only)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+WorkingDirectory=/home/eddie-cui/code/discover-backend
+EnvironmentFile=/home/eddie-cui/code/discover-backend/.env
+ExecStart=/home/eddie-cui/code/discover-backend/.venv/bin/uvicorn app.main:app --host 10.19.94.156 --port 8080
+Restart=on-failure
+RestartSec=5
+PrivateTmp=true
+NoNewPrivileges=true
+
+[Install]
+WantedBy=default.target

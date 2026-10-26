@@ -1,0 +1,11 @@
+[Unit]
+Description=Kedao daily aggregate insight
+After=network-online.target
+
+[Service]
+Type=oneshot
+WorkingDirectory=/home/eddie-cui/code/discover-backend
+EnvironmentFile=/home/eddie-cui/code/discover-backend/.env
+ExecStart=/home/eddie-cui/code/discover-backend/.venv/bin/python -m app.aggregate
+PrivateTmp=true
+NoNewPrivileges=true

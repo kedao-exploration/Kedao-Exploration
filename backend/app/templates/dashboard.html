@@ -1,0 +1,26 @@
+{% extends "base.html" %}
+{% block content %}
+<header class="page-header"><div><p class="kicker">OVERVIEW</p><h1>培养工作总览</h1><p>把分散的学生声音，变成可复核、可行动的支持线索。</p></div><div class="header-badge">数据来自 Supabase</div></header>
+<section class="metric-grid">
+  <article><span>活跃学生</span><b>{{ metrics.students }}</b><small>已导入档案</small></article>
+  <article><span>画像就绪</span><b>{{ metrics.ready }}</b><small>{{ ((metrics.ready / metrics.students * 100) if metrics.students else 0)|round|int }}% 覆盖率</small></article>
+  <article><span>等待更新</span><b>{{ metrics.queued }}</b><small>每分钟自动处理</small></article>
+  <article class="{% if metrics.failed %}warn{% endif %}"><span>需人工关注</span><b>{{ metrics.failed }}</b><small>模型生成失败</small></article>
+</section>
+<div class="two-columns">
+  <section class="panel">
+    <div class="panel-title"><div><p class="kicker">COLLECTIVE INSIGHT</p><h2>群体洞察</h2></div><span>{% if report %}{{ report.generated_at[:16]|replace('T',' ') }}{% else %}尚未生成{% endif %}</span></div>
+    {% if report %}
+      <p class="report-overview">{{ report.report.overview }}</p>
+      <h3>主要需求</h3>
+      <div class="theme-list">{% for theme in report.report.majority_themes[:5] %}<div><b>{{ theme.name }}</b><span>{{ theme.count }} 人 · {{ theme.percentage }}%</span></div>{% endfor %}</div>
+      <h3>少数但不能忽视</h3>
+      <div class="theme-list minority">{% for theme in report.report.minority_needs[:5] %}<div><b>{{ theme.name }}</b><span>{{ theme.count }} 人</span></div>{% endfor %}</div>
+    {% else %}<div class="empty">每日 03:00 自动生成；配置模型密钥并运行 aggregate timer 后会显示。</div>{% endif %}
+  </section>
+  <section class="panel">
+    <div class="panel-title"><div><p class="kicker">UPCOMING</p><h2>近期活动</h2></div><a href="/activities">管理活动 →</a></div>
+    {% if activities %}<div class="activity-list">{% for item in activities %}<article><span class="date-box">{{ item.start_at[5:10] }}</span><div><b>{{ item.title }}</b><small>{{ item.start_at[11:16] }} · {{ item.location or '地点待定' }}</small></div><span class="status {{ item.status }}">{{ item.status }}</span></article>{% endfor %}</div>{% else %}<div class="empty">还没有即将开始的活动。</div>{% endif %}
+  </section>
+</div>
+{% endblock %}
