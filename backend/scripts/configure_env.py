@@ -29,7 +29,9 @@ def parse_env(text: str) -> dict[str, str]:
 
 def main() -> None:
     existing = parse_env(ENV_PATH.read_text(encoding="utf-8")) if ENV_PATH.exists() else {}
-    existing.setdefault("SILICONFLOW_API_KEY", "")
+    api_key_alias = existing.pop("API_KEY", "")
+    if not existing.get("SILICONFLOW_API_KEY"):
+        existing["SILICONFLOW_API_KEY"] = api_key_alias
     existing.setdefault("SILICONFLOW_BASE_URL", "https://api.siliconflow.cn/v1")
     existing.setdefault("SILICONFLOW_MODEL", "deepseek-ai/DeepSeek-V4-Flash")
     existing.setdefault("SESSION_SECRET", secrets.token_urlsafe(48))
