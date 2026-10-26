@@ -1,8 +1,6 @@
 from __future__ import annotations
 
-import csv
 import hashlib
-import io
 import json
 import secrets
 import tempfile
@@ -13,7 +11,7 @@ from urllib.parse import quote
 from zoneinfo import ZoneInfo
 
 from fastapi import FastAPI, File, Form, HTTPException, Request, UploadFile
-from fastapi.responses import HTMLResponse, RedirectResponse, StreamingResponse
+from fastapi.responses import HTMLResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from pydantic import ValidationError
@@ -121,44 +119,65 @@ def dashboard(request: Request):
     return templates.TemplateResponse("dashboard.html", page_context(request, metrics=metrics, report=report_rows[0] if report_rows else None, activities=activities))
 
 
-@app.get("/students", response_class=HTMLResponse)
-def student_list(request: Request, q: str = ""):
-    if redirect := require_page_login(request): return redirect
+def render_student_list(request: Request, q: str = "", invite_result: dict | None = None, error: str | None = None):
     params = {"order": "updated_at.desc"}
     if q:
         escaped = q.replace("%", "")[:80]
         params["or"] = f"(name.ilike.*{escaped}*,email.ilike.*{escaped}*,student_number.ilike.*{escaped}*)"
     students = db.select("students", select="id,name,email,student_number,major,year_level,model_status,consent_status,last_profile_input_at", params=params)
-    return templates.TemplateResponse("students.html", page_context(request, students=students, q=q, import_result=None))
+    return templates.TemplateResponse("students.html", page_context(request, students=students, q=q, invite_result=invite_result, error=error))
 
 
-@app.post("/students/import", response_class=HTMLResponse)
-async def import_roster(request: Request, csrf_token: Annotated[str, Form()], roster: UploadFile = File(...)):
+@app.get("/students", response_class=HTMLResponse)
+def student_list(request: Request, q: str = ""):
+    if redirect := require_page_login(request): return redirect
+    return render_student_list(request, q=q)
+
+
+@app.post("/students", response_class=HTMLResponse)
+def create_student_invite(
+    request: Request,
+    csrf_token: Annotated[str, Form()],
+    student_number: Annotated[str, Form()],
+    email: Annotated[str, Form()],
+    name: Annotated[str, Form()] = "",
+):
     if redirect := require_page_login(request): return redirect
     require_csrf(request, csrf_token)
-    raw = (await roster.read()).decode("utf-8-sig")
-    reader = csv.DictReader(io.StringIO(raw))
-    required = {"student_number", "email"}
-    if not reader.fieldnames or not required.issubset(set(reader.fieldnames)):
-        raise HTTPException(400, "CSV 需要 student_number 与 email 两列")
-    exports: list[dict[str, str]] = []
-    for line, item in enumerate(reader, start=2):
-        student_number = (item.get("student_number") or "").strip()
-        email = (item.get("email") or "").strip().lower()
-        if not student_number or not email:
-            continue
-        try:
-            student = db.upsert("students", {"student_number": student_number, "email": email, "name": (item.get("name") or "").strip() or None}, on_conflict="student_number")[0]
-            token = "KD-" + secrets.token_urlsafe(12).replace("_", "A").replace("-", "B").upper()
-            token_hash = hashlib.sha256(token.encode()).hexdigest()
-            db.insert("student_invites", {"student_id": student["id"], "token_hash": token_hash}, returning=False)
-            exports.append({"student_number": student_number, "email": email, "name": student.get("name") or "", "invite_token": token, "url": f"{settings.student_site_url.rstrip('/')}/#/onboarding?token={quote(token)}"})
-        except SupabaseError as exc:
-            raise HTTPException(400, f"第 {line} 行导入失败：{exc}") from exc
-    output = io.StringIO()
-    writer = csv.DictWriter(output, fieldnames=["student_number", "email", "name", "invite_token", "url"])
-    writer.writeheader(); writer.writerows(exports)
-    return StreamingResponse(iter(["\ufeff" + output.getvalue()]), media_type="text/csv; charset=utf-8", headers={"Content-Disposition": 'attachment; filename="student-invites.csv"'})
+    student_number = student_number.strip()
+    email = email.strip().lower()
+    name = name.strip()
+    if not student_number or len(student_number) > 40:
+        return render_student_list(request, error="请输入有效学号（不超过 40 个字符）。")
+    if "@" not in email or len(email) > 320:
+        return render_student_list(request, error="请输入有效邮箱。")
+    try:
+        by_number = db.select("students", params={"student_number": f"eq.{student_number}"}, limit=1)
+        by_email = db.select("students", params={"email": f"eq.{email}"}, limit=1)
+        matches = by_number or by_email
+        if by_number and by_email and by_number[0]["id"] != by_email[0]["id"]:
+            return render_student_list(request, error="该学号与邮箱分别属于不同档案，请先核对信息。")
+        if matches:
+            student = matches[0]
+            if student["student_number"] != student_number or student["email"].lower() != email:
+                return render_student_list(request, error="该学号或邮箱已绑定其他学生，请检查后再提交。")
+            db.update("students", {"name": name or student.get("name")}, filters={"id": f"eq.{student['id']}"})
+        else:
+            student = db.insert("students", {"student_number": student_number, "email": email, "name": name or None})[0]
+        db.update("student_invites", {"revoked_at": datetime.now(SHANGHAI).isoformat()}, filters={"student_id": f"eq.{student['id']}", "consumed_at": "is.null", "revoked_at": "is.null"})
+        token = "KD-" + secrets.token_urlsafe(12).replace("_", "A").replace("-", "B").upper()
+        db.insert("student_invites", {"student_id": student["id"], "token_hash": hashlib.sha256(token.encode()).hexdigest()}, returning=False)
+        invite_result = {
+            "name": name or student.get("name") or "待首次填写",
+            "student_number": student_number,
+            "email": email,
+            "token": token,
+            "url": f"{settings.student_site_url.rstrip('/')}/#/onboarding?token={quote(token)}",
+        }
+        db.insert("audit_logs", {"actor": settings.advisor_username, "action": "student_invite_created", "entity_type": "student", "entity_id": student["id"]}, returning=False)
+        return render_student_list(request, invite_result=invite_result)
+    except SupabaseError as exc:
+        return render_student_list(request, error=f"保存失败：{exc}")
 
 
 @app.get("/students/{student_id}", response_class=HTMLResponse)
@@ -273,17 +292,14 @@ def confirm_campaign(request: Request, campaign_id: str, csrf_token: Annotated[s
     return RedirectResponse(f"/campaigns/{campaign_id}", status_code=303)
 
 
-@app.get("/campaigns/{campaign_id}/export")
-def export_campaign(request: Request, campaign_id: str):
+@app.get("/campaigns/{campaign_id}/final", response_class=HTMLResponse)
+def final_campaign(request: Request, campaign_id: str):
     if redirect := require_page_login(request): return redirect
     campaign = db.select("campaigns", select="status", params={"id": f"eq.{campaign_id}"}, limit=1)
     if not campaign or campaign[0]["status"] not in {"confirmed", "exported"}:
-        raise HTTPException(409, "请先确认最终名单再导出")
+        raise HTTPException(409, "请先确认最终名单")
     rows = db.select("campaign_recipients", select="student:students(name,email,student_number,major),advisor_note", params={"campaign_id": f"eq.{campaign_id}", "included": "eq.true"})
-    output = io.StringIO(); writer = csv.writer(output); writer.writerow(["姓名", "邮箱", "学号", "专业", "advisor_note"])
-    for row in rows:
-        student = row.get("student") or {}; writer.writerow([student.get("name"), student.get("email"), student.get("student_number"), student.get("major"), row.get("advisor_note")])
-    return StreamingResponse(iter(["\ufeff" + output.getvalue()]), media_type="text/csv; charset=utf-8", headers={"Content-Disposition": f'attachment; filename="campaign-{campaign_id}.csv"'})
+    return templates.TemplateResponse("campaign_final.html", page_context(request, campaign_id=campaign_id, rows=rows))
 
 
 @app.get("/surveys", response_class=HTMLResponse)
@@ -291,7 +307,8 @@ def surveys_page(request: Request):
     if redirect := require_page_login(request): return redirect
     surveys = db.select("survey_definitions", params={"order": "created_at.desc"})
     campaigns = db.select("campaigns", select="id,name,status", params={"status": "in.(confirmed,exported)", "order": "created_at.desc"})
-    return templates.TemplateResponse("surveys.html", page_context(request, surveys=surveys, campaigns=campaigns, validation_error=None))
+    students = db.select("students", select="id,name,email,student_number", params={"consent_status": "eq.granted", "deactivated_at": "is.null", "order": "name.asc"})
+    return templates.TemplateResponse("surveys.html", page_context(request, surveys=surveys, campaigns=campaigns, students=students, validation_error=None))
 
 
 @app.post("/surveys")
@@ -314,24 +331,23 @@ def publish_survey(request: Request, survey_id: str, csrf_token: Annotated[str, 
     return RedirectResponse("/surveys", status_code=303)
 
 
-@app.post("/surveys/{survey_id}/assign")
-def assign_survey(request: Request, survey_id: str, csrf_token: Annotated[str, Form()], campaign_id: Annotated[str, Form()] = "", student_ids: Annotated[str, Form()] = ""):
+@app.post("/surveys/{survey_id}/assign", response_class=HTMLResponse)
+def assign_survey(request: Request, survey_id: str, csrf_token: Annotated[str, Form()], campaign_id: Annotated[str, Form()] = "", student_ids: Annotated[list[str] | None, Form()] = None):
     if redirect := require_page_login(request): return redirect
     require_csrf(request, csrf_token)
-    ids = {item.strip() for item in student_ids.split(",") if item.strip()}
+    ids = set(student_ids or [])
     if campaign_id:
         rows = db.select("campaign_recipients", select="student_id", params={"campaign_id": f"eq.{campaign_id}", "included": "eq.true"})
         ids.update(row["student_id"] for row in rows)
     if not ids: raise HTTPException(400, "请选择至少一名学生或已确认名单")
-    exports = []
+    links = []
     for student_id in sorted(ids):
         token = "QS-" + secrets.token_urlsafe(15).replace("_", "A").replace("-", "B").upper()
         token_hash = hashlib.sha256(token.encode()).hexdigest()
         try:
             db.insert("survey_assignments", {"survey_id": survey_id, "student_id": student_id, "token_hash": token_hash}, returning=False)
             student = db.select("students", select="name,email,student_number", params={"id": f"eq.{student_id}"}, limit=1)[0]
-            exports.append({**student, "url": f"{settings.student_site_url.rstrip('/')}/#/survey?token={quote(token)}"})
+            links.append({**student, "url": f"{settings.student_site_url.rstrip('/')}/#/survey?token={quote(token)}"})
         except SupabaseError as exc:
             if "duplicate" not in str(exc).lower(): raise
-    output = io.StringIO(); writer = csv.DictWriter(output, fieldnames=["name", "email", "student_number", "url"]); writer.writeheader(); writer.writerows(exports)
-    return StreamingResponse(iter(["\ufeff" + output.getvalue()]), media_type="text/csv; charset=utf-8", headers={"Content-Disposition": f'attachment; filename="survey-{survey_id}-links.csv"'})
+    return templates.TemplateResponse("survey_links.html", page_context(request, survey_id=survey_id, links=links))
