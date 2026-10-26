@@ -15,7 +15,7 @@ import {
 } from "lucide-react";
 import { onboardingSteps } from "./onboarding";
 import { loadSurvey, submitOnboarding, submitSurvey } from "./lib/supabase";
-import type { Answers, SurveyDefinition, SurveyQuestion } from "./types";
+import type { Answers, OdysseyPlanAnswer, SurveyDefinition, SurveyQuestion } from "./types";
 
 type Route = { page: "onboarding" | "survey"; token: string };
 
@@ -61,9 +61,9 @@ function TokenGate({ onContinue, mode = "onboarding" }: { onContinue: (token: st
       <div className="hero-icon"><Sparkles /></div>
       <p className="eyebrow">{mode === "survey" ? "一次轻量的回访" : "你好，探索者"}</p>
       <h1>{mode === "survey" ? "打开你的专属问卷" : "让书院更懂得如何支持你"}</h1>
-      <p className="hero-copy">{mode === "survey" ? "输入老师发送给你的个人链接码，回答将用于更新成长画像。" : "用 6–8 分钟讲讲你的现状、目标和兴趣。没有标准答案，真实就是最好的答案。"}</p>
+      <p className="hero-copy">{mode === "survey" ? "输入老师发送给你的个人链接码，回答将用于更新成长画像。" : "用约 12–15 分钟讲讲你的现状、目标和三种未来可能。没有标准答案，真实就是最好的答案。"}</p>
       <div className="trust-row">
-        <span><Clock3 size={17} /> 约 6–8 分钟</span>
+        <span><Clock3 size={17} /> 约 12–15 分钟</span>
         <span><LockKeyhole size={17} /> 一人一码</span>
         <span><HeartHandshake size={17} /> 非诊断式支持</span>
       </div>
@@ -117,7 +117,14 @@ function Onboarding({ initialToken }: { initialToken: string }) {
       if (!question.required) continue;
       const value = answers[question.id];
       if (value === undefined || value === "" || (Array.isArray(value) && value.length === 0)) return `请完成“${question.label}”。`;
-      if (question.type === "matrix" && question.items?.some((item) => typeof value !== "object" || value === null || Array.isArray(value) || typeof value[item.id] !== "number")) return `请完成“${question.label}”中的每一行。`;
+      if (question.type === "matrix") {
+        const matrix = typeof value === "object" && value !== null && !Array.isArray(value) ? value as Record<string, unknown> : {};
+        if (question.items?.some((item) => typeof matrix[item.id] !== "number")) return `请完成“${question.label}”中的每一行。`;
+      }
+      if (question.type === "odyssey") {
+        const plan = typeof value === "object" && value !== null && !Array.isArray(value) ? value as Partial<OdysseyPlanAnswer> : {};
+        if (["title", "five_year_goal", "core_activities", "capabilities", "challenges"].some((field) => !String(plan[field as keyof OdysseyPlanAnswer] || "").trim())) return `请完整填写“${question.label}”。`;
+      }
     }
     if (step === 0) {
       const email = String(answers.email || "");
@@ -136,7 +143,7 @@ function Onboarding({ initialToken }: { initialToken: string }) {
     }
     setSubmitting(true);
     try {
-      await submitOnboarding(token, { ...answers, form_version: "3.0.0", client_submitted_at: new Date().toISOString() });
+      await submitOnboarding(token, { ...answers, form_version: "3.1.0", client_submitted_at: new Date().toISOString() });
       localStorage.removeItem(storageKey);
       setDone(true);
     } catch (cause) {
@@ -150,7 +157,7 @@ function Onboarding({ initialToken }: { initialToken: string }) {
   return (
     <section className="form-card">
       <div className="form-topline">
-        <div><span>第 {step + 1} 步，共 {onboardingSteps.length} 步</span><b>约剩 {Math.max(1, 7 - step)} 分钟</b></div>
+        <div><span>第 {step + 1} 步，共 {onboardingSteps.length} 步</span><b>约剩 {[14, 12, 10, 8, 6, 4][step] || 2} 分钟</b></div>
         <div className="progress-track" aria-label={`完成进度 ${Math.round(progress)}%`}><span style={{ width: `${progress}%` }} /></div>
       </div>
       <div className="section-heading">
@@ -191,10 +198,16 @@ function QuestionField({ question, value, onChange, number }: { question: Survey
     onChange(current.includes(option) ? current.filter((item) => item !== option) : [...current, option]);
   };
   const matrixValue = typeof value === "object" && value !== null && !Array.isArray(value) ? value as Record<string, number> : {};
+  const odysseyValue = typeof value === "object" && value !== null && !Array.isArray(value) ? value as Partial<OdysseyPlanAnswer> : {};
+  const updateOdyssey = (field: keyof OdysseyPlanAnswer, next: string) => onChange({
+    title: "", five_year_goal: "", core_activities: "", capabilities: "", challenges: "",
+    ...odysseyValue,
+    [field]: next,
+  });
   return (
-    <fieldset className={`question ${question.sensitive ? "sensitive" : ""}`}>
+    <fieldset className={`question ${question.sensitive ? "sensitive" : ""} ${question.type === "odyssey" ? "odyssey-question" : ""}`}>
       <legend>{number && <span className="question-number">{number.toString().padStart(2, "0")}</span>}<span>{question.label}{question.required && <em>必填</em>}</span></legend>
-      {question.description && <p className="question-description">{question.description}</p>}
+      {question.description && question.type !== "odyssey" && <p className="question-description">{question.description}</p>}
       {question.sensitive && <p className="sensitive-note"><LockKeyhole size={13} /> 状态问题，可选择暂不回答</p>}
       {question.type === "short_text" && <input className="text-field" value={typeof value === "string" ? value : ""} maxLength={question.maxLength} onChange={(event) => onChange(event.target.value)} />}
       {question.type === "long_text" && <textarea className="text-field" rows={4} value={typeof value === "string" ? value : ""} maxLength={question.maxLength} onChange={(event) => onChange(event.target.value)} placeholder="不用写很长，一两句话就好" />}
@@ -204,6 +217,14 @@ function QuestionField({ question, value, onChange, number }: { question: Survey
       })}</div>}
       {question.type === "scale" && <div className="scale-wrap"><div className="scale-labels"><span>{question.minLabel}</span><span>{question.maxLabel}</span></div><div className="scale-options">{Array.from({ length: (question.max || 5) - (question.min || 1) + 1 }, (_, index) => index + (question.min || 1)).map((score) => <button type="button" key={score} className={value === score ? "selected" : ""} onClick={() => onChange(score)}>{score}</button>)}</div></div>}
       {question.type === "matrix" && <div className="matrix-wrap"><div className="matrix-axis"><span>{question.minLabel}</span><span>{question.maxLabel}</span></div>{question.items?.map((item) => <div className="matrix-row" key={item.id}><span>{item.label}</span><div className="scale-options">{Array.from({ length: (question.max || 5) - (question.min || 1) + 1 }, (_, index) => index + (question.min || 1)).map((score) => <button type="button" key={score} aria-label={`${item.label}：${score}分`} className={matrixValue[item.id] === score ? "selected" : ""} onClick={() => onChange({ ...matrixValue, [item.id]: score })}>{score}</button>)}</div></div>)}</div>}
+      {question.type === "odyssey" && <div className={`odyssey-card ${question.tone || "coral"}`}>
+        <div className="odyssey-heading"><span>{question.badge}</span><small>{question.description}</small></div>
+        <label>标题<input className="text-field" maxLength={120} value={odysseyValue.title || ""} placeholder={question.placeholders?.title} onChange={(event) => updateOdyssey("title", event.target.value)} /></label>
+        <label>目标<textarea className="text-field" rows={3} maxLength={800} value={odysseyValue.five_year_goal || ""} placeholder={question.placeholders?.five_year_goal} onChange={(event) => updateOdyssey("five_year_goal", event.target.value)} /></label>
+        <label>核心活动<textarea className="text-field" rows={3} maxLength={800} value={odysseyValue.core_activities || ""} placeholder={question.placeholders?.core_activities} onChange={(event) => updateOdyssey("core_activities", event.target.value)} /></label>
+        <label>需要的能力<textarea className="text-field" rows={3} maxLength={800} value={odysseyValue.capabilities || ""} placeholder={question.placeholders?.capabilities} onChange={(event) => updateOdyssey("capabilities", event.target.value)} /></label>
+        <label>可能的挑战<textarea className="text-field" rows={3} maxLength={800} value={odysseyValue.challenges || ""} placeholder={question.placeholders?.challenges} onChange={(event) => updateOdyssey("challenges", event.target.value)} /></label>
+      </div>}
     </fieldset>
   );
 }
