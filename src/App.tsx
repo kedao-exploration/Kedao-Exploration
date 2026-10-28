@@ -5,8 +5,6 @@ import {
   BookOpen,
   Check,
   CheckCircle2,
-  Clock3,
-  HeartHandshake,
   Leaf,
   LoaderCircle,
   LockKeyhole,
@@ -44,7 +42,7 @@ function App() {
         </a>
         <span className="privacy-pill"><ShieldCheck size={15} /> 信息仅用于成长支持</span>
       </header>
-      {route.page === "survey" ? <FollowUpSurvey initialToken={route.token} /> : <Onboarding initialToken={route.token} />}
+      {route.page === "survey" ? <FollowUpSurvey initialToken={route.token} /> : <Onboarding />}
       <footer>科道书院 · 尊重每一种成长节奏</footer>
     </main>
   );
@@ -54,34 +52,28 @@ function Decorations() {
   return <div className="decorations" aria-hidden="true"><i /><i /><i /></div>;
 }
 
-function TokenGate({ onContinue, mode = "onboarding" }: { onContinue: (token: string) => void; mode?: "onboarding" | "survey" }) {
+function SurveyTokenGate({ onContinue }: { onContinue: (token: string) => void }) {
   const [token, setToken] = useState("");
   return (
     <section className="hero-card token-card">
       <div className="hero-icon"><Sparkles /></div>
-      <p className="eyebrow">{mode === "survey" ? "一次轻量的回访" : "你好，探索者"}</p>
-      <h1>{mode === "survey" ? "打开你的专属问卷" : "让书院更懂得如何支持你"}</h1>
-      <p className="hero-copy">{mode === "survey" ? "输入老师发送给你的个人链接码，回答将用于更新成长画像。" : "用约 12–15 分钟讲讲你的现状、目标和三种未来可能。没有标准答案，真实就是最好的答案。"}</p>
-      <div className="trust-row">
-        <span><Clock3 size={17} /> 约 12–15 分钟</span>
-        <span><LockKeyhole size={17} /> 一人一码</span>
-        <span><HeartHandshake size={17} /> 非诊断式支持</span>
-      </div>
+      <p className="eyebrow">一次轻量的回访</p>
+      <h1>打开你的专属问卷</h1>
+      <p className="hero-copy">输入老师发送给你的个人链接码，回答将用于更新成长画像。</p>
       <label className="token-input">
-        <span>个人邀请码</span>
-        <input value={token} onChange={(event) => setToken(event.target.value.trim())} placeholder="例如 KD-XXXX-XXXX" autoCapitalize="characters" />
+        <span>问卷链接码</span>
+        <input value={token} onChange={(event) => setToken(event.target.value.trim())} placeholder="例如 QS-XXXX-XXXX" autoCapitalize="characters" />
       </label>
       <button className="primary-button" disabled={token.length < 8} onClick={() => onContinue(token)}>
-        开始填写 <ArrowRight size={18} />
+        打开问卷 <ArrowRight size={18} />
       </button>
-      <p className="fine-print">邀请码只用于确认你的身份，不会展示给其他学生。若没有邀请码，请联系书院培养老师。</p>
+      <p className="fine-print">首次成长画像无需邀请码，可直接从首页填写。此处仅用于老师定向发送的后续问卷。</p>
     </section>
   );
 }
 
-function Onboarding({ initialToken }: { initialToken: string }) {
-  const [token, setToken] = useState(initialToken);
-  const storageKey = token ? `kedao-onboarding-${token.slice(-8)}` : "";
+function Onboarding() {
+  const storageKey = "kedao-onboarding-open-v1";
   const [step, setStep] = useState(0);
   const [answers, setAnswers] = useState<Answers>({ consent: false });
   const [error, setError] = useState("");
@@ -100,7 +92,6 @@ function Onboarding({ initialToken }: { initialToken: string }) {
     if (storageKey) localStorage.setItem(storageKey, JSON.stringify(answers));
   }, [answers, storageKey]);
 
-  if (!token) return <TokenGate onContinue={(value) => { setToken(value); window.location.hash = `#/onboarding?token=${encodeURIComponent(value)}`; }} />;
   if (done) return <SuccessCard title="谢谢你认真完成" message="你的回答已经安全保存。书院会在后台生成可解释的成长画像，并据此减少无关信息、推荐更适合你的机会。" />;
 
   const current = onboardingSteps[step];
@@ -143,7 +134,7 @@ function Onboarding({ initialToken }: { initialToken: string }) {
     }
     setSubmitting(true);
     try {
-      await submitOnboarding(token, { ...answers, form_version: "3.1.0", client_submitted_at: new Date().toISOString() });
+      await submitOnboarding({ ...answers, form_version: "3.2.0" });
       localStorage.removeItem(storageKey);
       setDone(true);
     } catch (cause) {
@@ -245,7 +236,7 @@ function FollowUpSurvey({ initialToken }: { initialToken: string }) {
 
   const requiredMissing = useMemo(() => definition?.questions.find((question) => question.required && (answers[question.id] === undefined || answers[question.id] === "" || (Array.isArray(answers[question.id]) && (answers[question.id] as string[]).length === 0))), [answers, definition]);
 
-  if (!token) return <TokenGate mode="survey" onContinue={(value) => { setToken(value); window.location.hash = `#/survey?token=${encodeURIComponent(value)}`; }} />;
+  if (!token) return <SurveyTokenGate onContinue={(value) => { setToken(value); window.location.hash = `#/survey?token=${encodeURIComponent(value)}`; }} />;
   if (loading) return <LoadingCard />;
   if (done) return <SuccessCard title="反馈已收到" message="谢谢你的更新。新的回答会进入画像更新队列，老师看到的是带证据和更新时间的新版本。" />;
   if (!definition) return <MessageCard title="暂时无法打开问卷" message={error || "链接可能已失效，请联系培养老师重新生成。"} />;

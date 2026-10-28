@@ -3,7 +3,7 @@
 这是科道书院内部试点系统，包含：
 
 - GitHub Pages 学生端：首次画像采集与动态跟进问卷；
-- Supabase：一次性邀请、版本化问卷、画像、活动和推送名单；
+- Supabase：开放首次采集、个人跟进问卷、画像、活动和推送名单；
 - FastAPI advisor 后台：学生画像、群体洞察、活动匹配、名单确认与网页内复制；
 - SiliconFlow `deepseek-ai/DeepSeek-V4-Flash`：结构化、带证据的画像与推荐；
 - systemd worker、每日快照和群体报告。
@@ -21,7 +21,7 @@ npm run build
 
 入口：
 
-- `/#/onboarding?token=...`
+- `/#/onboarding`（公开入口，无需邀请码）
 - `/#/survey?token=...`
 
 GitHub Pages workflow 从仓库 Variables 读取：
@@ -36,11 +36,12 @@ GitHub Pages workflow 从仓库 Variables 读取：
 在 SQL Editor 按文件名顺序执行迁移。新项目先执行
 [`202610260001_student_modeling.sql`](supabase/migrations/202610260001_student_modeling.sql)，
 已有项目继续执行
-[`202610260002_odyssey_plans.sql`](supabase/migrations/202610260002_odyssey_plans.sql)。
+[`202610260002_odyssey_plans.sql`](supabase/migrations/202610260002_odyssey_plans.sql) 和
+[`202610290003_open_onboarding.sql`](supabase/migrations/202610290003_open_onboarding.sql)。
 
 匿名用户不能直接操作任何数据表，只能调用：
 
-- `claim_invite_and_submit_onboarding`
+- `submit_open_onboarding`
 - `get_survey_by_token`
 - `submit_survey_response`
 

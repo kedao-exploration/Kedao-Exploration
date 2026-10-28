@@ -119,13 +119,13 @@ def dashboard(request: Request):
     return templates.TemplateResponse("dashboard.html", page_context(request, metrics=metrics, report=report_rows[0] if report_rows else None, activities=activities))
 
 
-def render_student_list(request: Request, q: str = "", invite_result: dict | None = None, error: str | None = None):
+def render_student_list(request: Request, q: str = "", student_result: dict | None = None, error: str | None = None):
     params = {"order": "updated_at.desc"}
     if q:
         escaped = q.replace("%", "")[:80]
         params["or"] = f"(name.ilike.*{escaped}*,email.ilike.*{escaped}*,student_number.ilike.*{escaped}*)"
     students = db.select("students", select="id,name,email,student_number,major,year_level,model_status,consent_status,last_profile_input_at", params=params)
-    return templates.TemplateResponse("students.html", page_context(request, students=students, q=q, invite_result=invite_result, error=error))
+    return templates.TemplateResponse("students.html", page_context(request, students=students, q=q, student_result=student_result, error=error))
 
 
 @app.get("/students", response_class=HTMLResponse)
@@ -135,7 +135,7 @@ def student_list(request: Request, q: str = ""):
 
 
 @app.post("/students", response_class=HTMLResponse)
-def create_student_invite(
+def create_student_record(
     request: Request,
     csrf_token: Annotated[str, Form()],
     student_number: Annotated[str, Form()],
@@ -164,18 +164,14 @@ def create_student_invite(
             db.update("students", {"name": name or student.get("name")}, filters={"id": f"eq.{student['id']}"})
         else:
             student = db.insert("students", {"student_number": student_number, "email": email, "name": name or None})[0]
-        db.update("student_invites", {"revoked_at": datetime.now(SHANGHAI).isoformat()}, filters={"student_id": f"eq.{student['id']}", "consumed_at": "is.null", "revoked_at": "is.null"})
-        token = "KD-" + secrets.token_urlsafe(12).replace("_", "A").replace("-", "B").upper()
-        db.insert("student_invites", {"student_id": student["id"], "token_hash": hashlib.sha256(token.encode()).hexdigest()}, returning=False)
-        invite_result = {
+        student_result = {
             "name": name or student.get("name") or "待首次填写",
             "student_number": student_number,
             "email": email,
-            "token": token,
-            "url": f"{settings.student_site_url.rstrip('/')}/#/onboarding?token={quote(token)}",
+            "url": f"{settings.student_site_url.rstrip('/')}/#/onboarding",
         }
-        db.insert("audit_logs", {"actor": settings.advisor_username, "action": "student_invite_created", "entity_type": "student", "entity_id": student["id"]}, returning=False)
-        return render_student_list(request, invite_result=invite_result)
+        db.insert("audit_logs", {"actor": settings.advisor_username, "action": "student_record_saved", "entity_type": "student", "entity_id": student["id"]}, returning=False)
+        return render_student_list(request, student_result=student_result)
     except SupabaseError as exc:
         return render_student_list(request, error=f"保存失败：{exc}")
 

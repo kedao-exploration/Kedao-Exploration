@@ -1,4 +1,4 @@
-.invite-result {
+.student-result {
   display: grid;
   grid-template-columns: minmax(240px, .75fr) minmax(320px, 1.25fr);
   gap: 28px;
@@ -6,7 +6,7 @@
   border-color: #c9dfd0;
   background: #fbfefb;
 }
-.invite-result h2 { margin: 4px 0 8px; }
+.student-result h2 { margin: 4px 0 8px; }
 .copy-card, .copy-panel { display: grid; gap: 10px; }
 .copy-card label { display: grid; gap: 6px; color: var(--muted); font-size: 10px; }
 .copy-card code, .link-code { overflow-wrap: anywhere; color: #174e3f; }
@@ -20,5 +20,5 @@
 .student-picker input { margin-top: 3px; }
 .student-picker small { display: block; color: var(--muted); font-weight: 400; }
 @media(max-width:700px) {
-  .invite-result, .copy-panel { grid-template-columns: 1fr; }
+  .student-result, .copy-panel { grid-template-columns: 1fr; }
 }
