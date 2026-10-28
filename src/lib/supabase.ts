@@ -27,9 +27,8 @@ async function rpc<T>(name: string, body: Record<string, unknown>): Promise<T> {
   return payload as T;
 }
 
-export async function submitOnboarding(token: string, answers: Answers) {
-  return rpc<{ ok: boolean; student_id: string }>("claim_invite_and_submit_onboarding", {
-    p_token: token,
+export async function submitOnboarding(answers: Answers) {
+  return rpc<{ ok: boolean; student_id: string }>("submit_open_onboarding", {
     p_payload: answers,
   });
 }

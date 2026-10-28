@@ -19,7 +19,7 @@ export const onboardingSteps: Array<{
   {
     eyebrow: "从认识你开始",
     title: "基础信息",
-    description: "这些信息只用于建立唯一档案，并帮助老师在获得授权后与你联系。",
+    description: "无需邀请码，直接填写即可。这些信息只用于建立唯一档案，并帮助老师在获得授权后与你联系。",
     questions: [
       { id: "name", type: "short_text", label: "姓名", required: true, maxLength: 80 },
       { id: "email", type: "short_text", label: "常用邮箱", description: "建议填写校内邮箱", required: true, maxLength: 320 },
