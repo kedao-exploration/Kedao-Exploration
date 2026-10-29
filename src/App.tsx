@@ -49,7 +49,7 @@ function App() {
 }
 
 function Decorations() {
-  return <div className="decorations" aria-hidden="true"><i /><i /><i /></div>;
+  return <div className="decorations" aria-hidden="true"><i /><i /><i /><i /><i /></div>;
 }
 
 function SurveyTokenGate({ onContinue }: { onContinue: (token: string) => void }) {
@@ -96,6 +96,7 @@ function Onboarding() {
 
   const current = onboardingSteps[step];
   const progress = ((step + 1) / onboardingSteps.length) * 100;
+  const stepSymbols = ["👋", "📚", "✨", "🎯", "🌿", "🧭"];
 
   const update = (id: string, value: Answers[string]) => {
     setError("");
@@ -148,12 +149,15 @@ function Onboarding() {
   return (
     <section className="form-card">
       <div className="form-topline">
-        <div><span>第 {step + 1} 步，共 {onboardingSteps.length} 步</span><b>约剩 {[14, 12, 10, 8, 6, 4][step] || 2} 分钟</b></div>
+        <div>
+          <span className="step-pill">第 {step + 1} 步，共 {onboardingSteps.length} 步</span>
+          <span className="progress-copy">成长探索进行中</span>
+        </div>
         <div className="progress-track" aria-label={`完成进度 ${Math.round(progress)}%`}><span style={{ width: `${progress}%` }} /></div>
       </div>
       <div className="section-heading">
         <p className="eyebrow">{current.eyebrow}</p>
-        <h1>{current.title}</h1>
+        <div className="section-title-row"><span aria-hidden="true">{stepSymbols[step]}</span><h1>{current.title}</h1></div>
         <p>{current.description}</p>
       </div>
       {step === 0 && <ConsentPanel checked={answers.consent === true} onChange={(checked) => update("consent", checked)} />}
