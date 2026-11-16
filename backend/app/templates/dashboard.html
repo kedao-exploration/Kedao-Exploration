@@ -7,6 +7,34 @@
   <article><span>等待更新</span><b>{{ metrics.queued }}</b><small>每分钟自动处理</small></article>
   <article class="{% if metrics.failed %}warn{% endif %}"><span>需人工关注</span><b>{{ metrics.failed }}</b><small>模型生成失败</small></article>
 </section>
+<section class="panel advisor-chat" id="advisor-chat" data-csrf-token="{{ csrf_token }}">
+  <div class="advisor-chat-heading">
+    <div>
+      <p class="kicker">STUDENT INSIGHT COPILOT</p>
+      <h2><span aria-hidden="true">✦</span> 问问科道助手</h2>
+      <p>用自然语言查找学生需求、兴趣与支持线索；每次提问都会自动附加最新画像。</p>
+    </div>
+    <div class="attachment-state" id="chat-attachment-state"><span></span> 服务端自动附加学生信息</div>
+  </div>
+  <div class="chat-starters" aria-label="常用问题">
+    <button type="button" data-chat-prompt="哪些学生对保研或科研感兴趣？请按需求类型总结。">保研与科研</button>
+    <button type="button" data-chat-prompt="最近有哪些少数但值得关注的学生需求？">少数需求</button>
+    <button type="button" data-chat-prompt="如果下个月举办一场活动，哪些主题最值得优先考虑？">活动灵感</button>
+    <button type="button" data-chat-prompt="哪些学生可能需要时间管理或压力支持？只给出非诊断式建议。">支持线索</button>
+  </div>
+  <div class="chat-transcript" id="chat-transcript" aria-live="polite" aria-label="对话记录">
+    <article class="chat-message assistant">
+      <div class="chat-avatar" aria-hidden="true">✦</div>
+      <div><b>科道助手</b><p>你好！可以问我“哪些学生适合某类活动”“某个年级最关心什么”，也可以直接输入学生姓名继续了解。回答会附上可复核的学生与画像证据。</p></div>
+    </article>
+  </div>
+  <form class="chat-composer" id="advisor-chat-form">
+    <label class="sr-only" for="advisor-chat-question">向科道助手提问</label>
+    <textarea id="advisor-chat-question" maxlength="2000" rows="2" placeholder="例如：找出对创业感兴趣、周三下午有空的学生，并说明依据"></textarea>
+    <button class="button primary" type="submit" id="advisor-chat-send"><span>发送</span><span aria-hidden="true">↗</span></button>
+  </form>
+  <p class="chat-privacy"><span aria-hidden="true">🔒</span> 仅在内网导师端使用。姓名、邮箱和学号不会发送给模型；模型返回内部编号后，再由服务器映射为学生名单。</p>
+</section>
 <div class="two-columns">
   <section class="panel">
     <div class="panel-title"><div><p class="kicker">COLLECTIVE INSIGHT</p><h2>群体洞察</h2></div><span>{% if report %}{{ report.generated_at[:16]|replace('T',' ') }}{% else %}尚未生成{% endif %}</span></div>

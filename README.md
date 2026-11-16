@@ -4,7 +4,7 @@
 
 - GitHub Pages 学生端：首次画像采集与动态跟进问卷；
 - Supabase：开放首次采集、个人跟进问卷、画像、活动和推送名单；
-- FastAPI advisor 后台：学生画像、群体洞察、活动匹配、名单确认与网页内复制；
+- FastAPI advisor 后台：学生画像、群体洞察、画像问答、活动匹配、名单确认与网页内复制；
 - SiliconFlow `deepseek-ai/DeepSeek-V4-Flash`：结构化、带证据的画像与推荐；
 - systemd worker、每日快照和群体报告。
 
@@ -65,6 +65,8 @@ cp .env.example .env
 - `backend/deploy/nginx/kedao-discover.conf`
 
 后台仅监听内网 `10.19.94.156:8080`。当前是 HTTP 内网试点，严禁直接映射公网；公网开放前必须增加 HTTPS 和更强认证。
+
+总览页包含“问问科道助手”：导师可用自然语言查询学生兴趣、目标和支持线索。每次请求会在 `DATA_DIR` 自动刷新权限为 `0600` 的 `advisor-chat-context.json`，将最新学生画像作为上下文。附件只含内部随机 ID 和去标识化画像；模型返回内部 ID 后，服务端才映射姓名、邮箱与学号，并在页面显示可复核的学生卡片。
 
 ## 隐私与模型边界
 
