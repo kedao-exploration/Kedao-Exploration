@@ -5,6 +5,7 @@ import json
 import secrets
 import tempfile
 from datetime import datetime
+from functools import lru_cache
 from pathlib import Path
 from typing import Annotated
 from urllib.parse import quote
@@ -17,8 +18,10 @@ from fastapi.templating import Jinja2Templates
 from pydantic import ValidationError
 from starlette.middleware.sessions import SessionMiddleware
 
+from .advisor_chat import build_advisor_chat_attachment, deidentify_chat_text
 from .config import get_settings
-from .models import SurveySchema
+from .llm import LLMService, advisor_question_requests_student_list
+from .models import AdvisorChatRequest, SurveySchema
 from .security import LoginRateLimiter, new_csrf_token, safe_next_path, verify_password
 from .supabase import Supabase, SupabaseError
 
@@ -37,6 +40,7 @@ app.add_middleware(
 app.mount("/static", StaticFiles(directory=BASE_DIR / "static"), name="static")
 templates = Jinja2Templates(directory=BASE_DIR / "templates")
 rate_limiter = LoginRateLimiter()
+chat_rate_limiter = LoginRateLimiter(limit=30, window_seconds=600)
 SHANGHAI = ZoneInfo("Asia/Shanghai")
 
 
@@ -69,6 +73,11 @@ def require_campaign_editable(campaign_id: str) -> dict:
     if rows[0]["status"] in {"confirmed", "exported"}:
         raise HTTPException(409, "最终名单已确认，不能再修改")
     return rows[0]
+
+
+@lru_cache(maxsize=1)
+def advisor_chat_llm() -> LLMService:
+    return LLMService(settings)
 
 
 @app.get("/health")
@@ -117,6 +126,75 @@ def dashboard(request: Request):
         "failed": sum(1 for row in students if row["model_status"] == "failed"),
     }
     return templates.TemplateResponse("dashboard.html", page_context(request, metrics=metrics, report=report_rows[0] if report_rows else None, activities=activities))
+
+
+@app.post("/api/advisor-chat")
+def advisor_chat(request: Request, payload: AdvisorChatRequest):
+    if not signed_in(request):
+        raise HTTPException(401, "请先登录导师端")
+    require_csrf(request, request.headers.get("X-CSRF-Token", ""))
+    identity = request.client.host if request.client else "unknown"
+    if not chat_rate_limiter.allow(identity):
+        raise HTTPException(429, "提问较频繁，请稍后再试")
+
+    question = payload.question.strip()
+    if not question:
+        raise HTTPException(422, "请输入问题")
+    try:
+        attachment, identities = build_advisor_chat_attachment(db, settings.data_dir)
+        safe_question = deidentify_chat_text(question, identities)
+        safe_history = [
+            {"role": item.role, "content": deidentify_chat_text(item.content, identities)}
+            for item in payload.history
+        ]
+        result = advisor_chat_llm().answer_advisor_chat(
+            attachment,
+            safe_question,
+            safe_history,
+            list_requested=advisor_question_requests_student_list(question),
+        )
+
+        seen: set[str] = set()
+        matches = []
+        for match in result.student_refs:
+            if match.student_ref in seen or match.student_ref not in identities:
+                continue
+            seen.add(match.student_ref)
+            matches.append({**identities[match.student_ref], "reason": match.reason, "evidence_refs": match.evidence_refs})
+
+        answer = result.answer
+        for student_ref, student in identities.items():
+            answer = answer.replace(student_ref, student["name"])
+        try:
+            db.insert("audit_logs", {
+                "actor": settings.advisor_username,
+                "action": "advisor_chat_asked",
+                "entity_type": "advisor_chat",
+                "details": {
+                    "question_sha256": hashlib.sha256(question.encode()).hexdigest(),
+                    "attachment_sha256": attachment["sha256"],
+                    "student_count": attachment["student_count"],
+                    "matched_count": len(matches),
+                },
+            }, returning=False)
+        except SupabaseError:
+            pass
+        return {
+            "answer": answer,
+            "students": matches,
+            "follow_up_suggestions": result.follow_up_suggestions,
+            "limitations": result.limitations,
+            "context": {
+                "student_count": attachment["student_count"],
+                "modeled_count": attachment["modeled_count"],
+                "generated_at": attachment["generated_at"],
+                "sha256": attachment["sha256"],
+            },
+        }
+    except SupabaseError as exc:
+        raise HTTPException(502, "学生信息暂时无法读取，请稍后重试") from exc
+    except RuntimeError as exc:
+        raise HTTPException(502, "模型暂时无法回答，请稍后重试") from exc
 
 
 def render_student_list(request: Request, q: str = "", student_result: dict | None = None, error: str | None = None):

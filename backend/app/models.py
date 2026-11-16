@@ -75,6 +75,30 @@ class ActivityMatch(BaseModel):
     caution: str | None = None
 
 
+class AdvisorChatMessage(BaseModel):
+    role: Literal["user", "assistant"]
+    content: str = Field(min_length=1, max_length=3000)
+
+
+class AdvisorChatRequest(BaseModel):
+    question: str = Field(min_length=1, max_length=2000)
+    history: list[AdvisorChatMessage] = Field(default_factory=list, max_length=8)
+
+
+class AdvisorChatStudentRef(BaseModel):
+    student_ref: str
+    reason: str = Field(min_length=1, max_length=300)
+    evidence_refs: list[str] = Field(default_factory=list, max_length=12)
+
+
+class AdvisorChatAnswer(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    answer: str = Field(min_length=1, max_length=1600)
+    student_refs: list[AdvisorChatStudentRef] = Field(default_factory=list)
+    follow_up_suggestions: list[str] = Field(default_factory=list, max_length=3)
+    limitations: list[str] = Field(default_factory=list, max_length=5)
+
+
 class SurveyQuestion(BaseModel):
     id: str = Field(pattern=r"^[a-z][a-z0-9_]{1,39}$")
     type: Literal["single", "multiple", "short_text", "long_text", "scale"]

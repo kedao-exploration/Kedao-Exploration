@@ -75,3 +75,139 @@ if (builder) {
     document.getElementById("schema-json").value = JSON.stringify({ questions });
   });
 }
+
+const advisorChat = document.getElementById("advisor-chat");
+const advisorChatForm = document.getElementById("advisor-chat-form");
+const advisorChatQuestion = document.getElementById("advisor-chat-question");
+const advisorChatTranscript = document.getElementById("chat-transcript");
+const advisorChatSend = document.getElementById("advisor-chat-send");
+const advisorChatAttachment = document.getElementById("chat-attachment-state");
+const advisorChatHistory = [];
+
+function appendChatMessage(role, text, options = {}) {
+  const message = document.createElement("article");
+  message.className = `chat-message ${role}`;
+  const avatar = document.createElement("div");
+  avatar.className = "chat-avatar";
+  avatar.setAttribute("aria-hidden", "true");
+  avatar.textContent = role === "assistant" ? "✦" : "你";
+  const body = document.createElement("div");
+  const author = document.createElement("b");
+  author.textContent = role === "assistant" ? "科道助手" : "导师";
+  const paragraph = document.createElement("p");
+  paragraph.textContent = text;
+  body.append(author, paragraph);
+
+  if (options.students?.length) {
+    const matches = document.createElement("div");
+    matches.className = "chat-student-list";
+    const title = document.createElement("strong");
+    title.textContent = `相关学生 · ${options.students.length} 人`;
+    matches.appendChild(title);
+    options.students.forEach((student) => {
+      const card = document.createElement("a");
+      card.className = "chat-student-card";
+      card.href = `/students/${encodeURIComponent(student.student_ref)}`;
+      const name = document.createElement("b");
+      name.textContent = student.name || "未填写姓名";
+      const meta = document.createElement("span");
+      meta.textContent = [student.year_level, student.major, student.email].filter(Boolean).join(" · ");
+      const reason = document.createElement("small");
+      reason.textContent = student.reason;
+      card.append(name, meta, reason);
+      matches.appendChild(card);
+    });
+    body.appendChild(matches);
+  }
+
+  if (options.limitations?.length) {
+    const note = document.createElement("p");
+    note.className = "chat-limitations";
+    note.textContent = `数据提示：${options.limitations.join("；")}`;
+    body.appendChild(note);
+  }
+
+  if (options.suggestions?.length) {
+    const suggestions = document.createElement("div");
+    suggestions.className = "chat-followups";
+    options.suggestions.forEach((suggestion) => {
+      const button = document.createElement("button");
+      button.type = "button";
+      button.dataset.chatPrompt = suggestion;
+      button.textContent = suggestion;
+      suggestions.appendChild(button);
+    });
+    body.appendChild(suggestions);
+  }
+
+  message.append(avatar, body);
+  advisorChatTranscript.appendChild(message);
+  advisorChatTranscript.scrollTop = advisorChatTranscript.scrollHeight;
+  return message;
+}
+
+function chatErrorMessage(response, fallback) {
+  if (!response) return fallback;
+  return response.json().then((data) => data.detail || fallback).catch(() => fallback);
+}
+
+async function sendAdvisorChat(question) {
+  if (!advisorChat || !question.trim() || advisorChatSend.disabled) return;
+  const cleanQuestion = question.trim();
+  appendChatMessage("user", cleanQuestion);
+  advisorChatQuestion.value = "";
+  advisorChatSend.disabled = true;
+  advisorChatSend.classList.add("loading");
+  const pending = appendChatMessage("assistant", "正在读取最新学生画像并整理回答…");
+  pending.classList.add("pending");
+  try {
+    const response = await fetch("/api/advisor-chat", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "X-CSRF-Token": advisorChat.dataset.csrfToken,
+      },
+      body: JSON.stringify({ question: cleanQuestion, history: advisorChatHistory.slice(-8) }),
+    });
+    if (!response.ok) throw new Error(await chatErrorMessage(response, "暂时无法回答，请稍后重试。"));
+    const data = await response.json();
+    pending.remove();
+    appendChatMessage("assistant", data.answer, {
+      students: data.students,
+      suggestions: data.follow_up_suggestions,
+      limitations: data.limitations,
+    });
+    advisorChatHistory.push({ role: "user", content: cleanQuestion }, { role: "assistant", content: data.answer });
+    while (advisorChatHistory.length > 8) advisorChatHistory.shift();
+    const generated = new Date(data.context.generated_at).toLocaleString("zh-CN", { hour12: false, month: "numeric", day: "numeric", hour: "2-digit", minute: "2-digit" });
+    advisorChatAttachment.innerHTML = "";
+    const dot = document.createElement("span");
+    advisorChatAttachment.append(dot, document.createTextNode(` 已附加 ${data.context.modeled_count}/${data.context.student_count} 份画像 · ${generated}`));
+  } catch (error) {
+    pending.remove();
+    appendChatMessage("assistant", error.message || "暂时无法回答，请稍后重试。");
+  } finally {
+    advisorChatSend.disabled = false;
+    advisorChatSend.classList.remove("loading");
+    advisorChatQuestion.focus();
+  }
+}
+
+advisorChatForm?.addEventListener("submit", (event) => {
+  event.preventDefault();
+  sendAdvisorChat(advisorChatQuestion.value);
+});
+
+advisorChatQuestion?.addEventListener("keydown", (event) => {
+  if (event.key === "Enter" && !event.shiftKey && !event.isComposing) {
+    event.preventDefault();
+    advisorChatForm.requestSubmit();
+  }
+});
+
+document.addEventListener("click", (event) => {
+  const prompt = event.target.closest("[data-chat-prompt]");
+  if (!prompt || !advisorChatQuestion) return;
+  advisorChatQuestion.value = prompt.dataset.chatPrompt;
+  advisorChatQuestion.focus();
+});
